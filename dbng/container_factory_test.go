@@ -363,4 +363,32 @@ var _ = Describe("ContainerFactory", func() {
 		})
 
 	})
+
+	Describe("FindOrCreateResourceCheckContainer", func() {
+
+		var (
+			creatingContainer *dbng.CreatingContainer
+			createErr         error
+		)
+
+		Context("when the container does not already exist", func() {
+
+			FIt("creates a new resource check container", func() {
+				creatingContainer, createErr = containerFactory.FindOrCreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "some-new-step-name")
+				Expect(createErr).ToNot(HaveOccurred())
+				foundContainer, found, _ := containerFactory.FindContainer(creatingContainer.Handle)
+				Expect(foundContainer.ID).To(Equal(creatingContainer.ID))
+				Expect(found).To(BeTrue())
+			})
+
+			Context("when the container already exists", func() {
+				It("returns that container", func() {
+					foundCreatingContianer, err := containerFactory.FindOrCreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "some-existing-step-name")
+					Expect(err).ToNot(HaveOccurred())
+					Expect(foundCreatingContianer).To(Equal(creatingContainer))
+				})
+			})
+		})
+
+	})
 })

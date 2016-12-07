@@ -29,6 +29,7 @@ func (factory *ContainerFactory) FindOrCreateResourceCheckContainer(
 	resourceConfig *UsedResourceConfig,
 	stepName string,
 ) (*CreatingContainer, error) {
+
 	tx, err := factory.conn.Begin()
 	if err != nil {
 		return nil, err
