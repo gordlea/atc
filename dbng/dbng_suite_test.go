@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"database/sql"
+
 	"github.com/concourse/atc"
 	"github.com/concourse/atc/db/lock"
 	"github.com/concourse/atc/db/lock/lockfakes"
@@ -43,11 +44,12 @@ var (
 	pipelineFactory         *dbng.PipelineFactory
 	buildFactory            *dbng.BuildFactory
 
-	defaultTeam           *dbng.Team
-	defaultWorker         *dbng.Worker
-	defaultResourceConfig *dbng.UsedResourceConfig
-	// defaultUsedResourceType  *dbng.UsedResourceType
-	defaultResourceType      dbng.ResourceType
+	defaultTeam                  *dbng.Team
+	defaultWorker                *dbng.Worker
+	defaultResourceConfig        *dbng.UsedResourceConfig
+	defaultResourceCacheForBuild *dbng.UsedResourceCache
+	defaultUsedResourceType      *dbng.UsedResourceType
+	// defaultResourceType          dbng.ResourceType
 	defaultResource          *dbng.Resource
 	defaultPipeline          *dbng.Pipeline
 	defaultBuild             *dbng.Build
@@ -113,6 +115,14 @@ var _ = BeforeEach(func() {
 	Expect(err).NotTo(HaveOccurred())
 
 	defaultResource, err = resourceFactory.CreateResource(defaultPipeline, "default-resource", "{\"resource\":\"config\"}")
+	Expect(err).NotTo(HaveOccurred())
+
+	resourceType := atc.ResourceType{Name: "some-resource-type", Type: baseResourceType.Type, Source: atc.Source{}}
+
+	defaultUsedResourceType, err = resourceTypeFactory.CreateResourceType(defaultPipeline, resourceType, atc.Version{})
+	Expect(err).NotTo(HaveOccurred())
+
+	defaultResourceCacheForBuild, err = resourceCacheFactory.FindOrCreateResourceCacheForBuild(logger, defaultBuild, "some-resource-cache", atc.Version{}, atc.Source{}, atc.Params{}, defaultPipeline, atc.ResourceTypes{resourceType})
 	Expect(err).NotTo(HaveOccurred())
 
 	logger = lagertest.NewTestLogger("test")

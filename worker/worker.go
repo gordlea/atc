@@ -222,7 +222,14 @@ func (worker *gardenWorker) FindOrCreateBuildContainer(
 	resourceTypes atc.ResourceTypes,
 	outputPaths map[string]string,
 ) (Container, error) {
-	creatingContainer, err := worker.dbContainerFactory.FindOrCreateBuildContainer(
+	var (
+		creatingContainer *dbng.CreatingContainer
+		createdContainer  *dbng.CreatedContainer
+		err               error
+		handle            string
+	)
+
+	creatingContainer, createdContainer, err = worker.dbContainerFactory.FindBuildContainer(
 		&dbng.Worker{
 			Name:       worker.name,
 			GardenAddr: &worker.addr,
@@ -241,7 +248,27 @@ func (worker *gardenWorker) FindOrCreateBuildContainer(
 		return nil, err
 	}
 
+	if creatingContainer != nil && createdContainer != nil {
+		creatingContainer, err = worker.dbContainerFactory.CreateBuildContainer(
+			&dbng.Worker{
+				Name:       worker.name,
+				GardenAddr: &worker.addr,
+			},
+			&dbng.Build{
+				ID: id.BuildID,
+			},
+			id.PlanID,
+			dbng.ContainerMetadata{
+				Name: metadata.StepName,
+				Type: string(metadata.Type),
+			},
+		)
+	}
+
 	containerProvider := worker.containerProviderFactory.ContainerProviderFor(worker)
+
+	containerProvider.FindContainerByHandle(logger, handle)
+
 	return containerProvider.FindOrCreateContainer(
 		logger,
 		cancel,

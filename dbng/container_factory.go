@@ -80,8 +80,6 @@ func (factory *ContainerFactory) CreateResourceCheckContainer(
 	}, nil
 }
 
-
-
 func (factory *ContainerFactory) ContainerCreated(
 	container *CreatingContainer,
 ) (*CreatedContainer, error) {
@@ -300,6 +298,19 @@ func (factory *ContainerFactory) ContainerDestroy(
 	return true, nil
 }
 
+func (factory *ContainerFactory) FindResourceGetContainer(
+	workerName string,
+	resourceCacheID int,
+	stepName string,
+) (*CreatingContainer, *CreatedContainer, error) {
+	return factory.findContainer(workerName, sq.Eq{
+		"worker_name":       workerName,
+		"step_name":         stepName,
+		"resource_cache_id": resourceCacheID,
+		"type":              "get",
+	})
+}
+
 func (factory *ContainerFactory) CreateResourceGetContainer(
 	worker *Worker,
 	resourceCache *UsedResourceCache,
@@ -355,6 +366,20 @@ func (factory *ContainerFactory) CreateResourceGetContainer(
 	}, nil
 }
 
+func (factory *ContainerFactory) FindBuildContainer(
+	workerName string,
+	buildID int,
+	planID string,
+	meta ContainerMetadata,
+) (*CreatingContainer, *CreatedContainer, error) {
+
+	return factory.findContainer(workerName, sq.Eq{
+		"worker_name": workerName,
+		"build_id":    buildID,
+		"plan_id":     planID,
+		"type":        meta.Type,
+	})
+}
 
 func (factory *ContainerFactory) CreateBuildContainer(
 	worker *Worker,
@@ -364,8 +389,6 @@ func (factory *ContainerFactory) CreateBuildContainer(
 ) (*CreatingContainer, error) {
 	return factory.createPlanContainer(worker, build, planID, meta)
 }
-
-
 
 func (factory *ContainerFactory) createPlanContainer(
 	worker *Worker,
@@ -426,7 +449,16 @@ func (factory *ContainerFactory) createPlanContainer(
 	}, nil
 }
 
-func (factory *ContainerFactory) FindContainer(workerName string, stepName string) (*CreatingContainer, *CreatedContainer, error) {
+func (f *ContainerFactory) FindResourceCheckContainer(workerName string, resourceConfigID int, stepName string) (*CreatingContainer, *CreatedContainer, error) {
+	return f.findContainer(workerName, sq.Eq{
+		"worker_name":        workerName,
+		"step_name":          stepName,
+		"resource_config_id": resourceConfigID,
+		"type":               "check",
+	})
+}
+
+func (factory *ContainerFactory) findContainer(workerName string, whereClause sq.Eq) (*CreatingContainer, *CreatedContainer, error) {
 	tx, err := factory.conn.Begin()
 	if err != nil {
 		return nil, nil, err
@@ -442,10 +474,7 @@ func (factory *ContainerFactory) FindContainer(workerName string, stepName strin
 
 	err = psql.Select("id", "state", "handle").
 		From("containers").
-		Where(sq.Eq{
-			"worker_name": workerName,
-			"step_name":   stepName,
-		}).
+		Where(whereClause).
 		RunWith(tx).
 		QueryRow().
 		Scan(&id, &state, &handle)
@@ -456,26 +485,27 @@ func (factory *ContainerFactory) FindContainer(workerName string, stepName strin
 		}
 		return nil, nil, err
 	}
+
 	err = tx.Commit()
 	if err != nil {
 		return nil, nil, err
 	}
 
 	switch state {
-	case ContainerStateCreating:
-		return &CreatingContainer{
-			ID: id,
-			Handle: handle,
-			WorkerName: workerName,
-			conn: factory.conn,
-		}, nil, nil
 	case ContainerStateCreated:
 		return nil, &CreatedContainer{
-			ID: id,
-			Handle: handle,
+			ID:         id,
+			Handle:     handle,
 			WorkerName: workerName,
-			conn: factory.conn,
+			conn:       factory.conn,
 		}, nil
+	case ContainerStateCreating:
+		return &CreatingContainer{
+			ID:         id,
+			Handle:     handle,
+			WorkerName: workerName,
+			conn:       factory.conn,
+		}, nil, nil
 	}
 
 	return nil, nil, nil
