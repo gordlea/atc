@@ -99,7 +99,7 @@ var _ = Describe("ContainerFactory", func() {
 				ID: dbBuild.ID(),
 			}
 
-			creatingContainer, err = containerFactory.FindOrCreateBuildContainer(defaultWorker, build, atc.PlanID("some-job"), dbng.ContainerMetadata{Type: "task", Name: "some-task"})
+			creatingContainer, err = containerFactory.CreateBuildContainer(defaultWorker, build, atc.PlanID("some-job"), dbng.ContainerMetadata{Type: "task", Name: "some-task"})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -172,7 +172,7 @@ var _ = Describe("ContainerFactory", func() {
 						err = dbLaterBuild.Finish(db.StatusSucceeded)
 						Expect(err).NotTo(HaveOccurred())
 
-						laterCreatingContainer, err = containerFactory.FindOrCreateBuildContainer(defaultWorker, laterBuild, atc.PlanID("some-job"), dbng.ContainerMetadata{Type: "task", Name: "some-task"})
+						laterCreatingContainer, err = containerFactory.CreateBuildContainer(defaultWorker, laterBuild, atc.PlanID("some-job"), dbng.ContainerMetadata{Type: "task", Name: "some-task"})
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = containerFactory.ContainerCreated(laterCreatingContainer)
@@ -211,7 +211,7 @@ var _ = Describe("ContainerFactory", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(ok).To(BeTrue())
 
-						laterCreatingContainer, err = containerFactory.FindOrCreateBuildContainer(defaultWorker, laterBuild, atc.PlanID("some-job"), dbng.ContainerMetadata{Type: "task", Name: "some-task"})
+						laterCreatingContainer, err = containerFactory.CreateBuildContainer(defaultWorker, laterBuild, atc.PlanID("some-job"), dbng.ContainerMetadata{Type: "task", Name: "some-task"})
 						Expect(err).NotTo(HaveOccurred())
 
 						_, err = containerFactory.ContainerCreated(laterCreatingContainer)
@@ -364,31 +364,79 @@ var _ = Describe("ContainerFactory", func() {
 
 	})
 
-	Describe("FindOrCreateResourceCheckContainer", func() {
-
+	FDescribe("FindContainer", func() {
 		var (
 			creatingContainer *dbng.CreatingContainer
-			createErr         error
+			createdContainer  *dbng.CreatedContainer
 		)
-
-		Context("when the container does not already exist", func() {
-
-			FIt("creates a new resource check container", func() {
-				creatingContainer, createErr = containerFactory.FindOrCreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "some-new-step-name")
-				Expect(createErr).ToNot(HaveOccurred())
-				foundContainer, found, _ := containerFactory.FindContainer(creatingContainer.Handle)
-				Expect(foundContainer.ID).To(Equal(creatingContainer.ID))
-				Expect(found).To(BeTrue())
+		Context("when the container exists", func() {
+			BeforeEach(func() {
+				creatingContainer, err = containerFactory.CreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "check-my-stuff")
+				Expect(err).NotTo(HaveOccurred())
 			})
-
-			Context("when the container already exists", func() {
-				It("returns that container", func() {
-					foundCreatingContianer, err := containerFactory.FindOrCreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "some-existing-step-name")
-					Expect(err).ToNot(HaveOccurred())
-					Expect(foundCreatingContianer).To(Equal(creatingContainer))
+			Context("when there is a creating container", func() {
+				It("finds the container and returns it", func() {
+					foundCreatingContainer, foundCreatedContainer, err := containerFactory.FindContainer(creatingContainer.WorkerName, "check-my-stuff")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(foundCreatingContainer).ToNot(BeNil())
+					Expect(foundCreatingContainer.ID).To(Equal(creatingContainer.ID))
+					Expect(foundCreatedContainer).To(BeNil())
 				})
 			})
-		})
 
+			Context("when there is a created container", func() {
+				BeforeEach(func() {
+					createdContainer, err = containerFactory.ContainerCreated(creatingContainer)
+				})
+				It("finds the container and returns it", func() {
+					foundCreatingContainer, foundCreatedContainer, err := containerFactory.FindContainer(creatingContainer.WorkerName, "check-my-stuff")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(foundCreatedContainer).ToNot(BeNil())
+					Expect(foundCreatedContainer.ID).To(Equal(creatingContainer.ID))
+					Expect(foundCreatingContainer).To(BeNil())
+				})
+			})
+
+		})
+		Context("when the container does not exist", func() {
+			It("returns not found", func() {
+				foundCreatingContainer, foundCreatedContainer, err := containerFactory.FindContainer(defaultCreatingContainer.WorkerName, "something-random")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(foundCreatingContainer).To(BeNil())
+				Expect(foundCreatedContainer).To(BeNil())
+			})
+		})
 	})
+
+	// I think we are going to want to not have this function anymore
+
+	//Describe("FindOrCreateResourceCheckContainer", func() {
+	//
+	//	var (
+	//		creatingContainer *dbng.CreatingContainer
+	//		createErr         error
+	//	)
+	//
+	//	Context("when the container does not already exist", func() {
+	//
+	//		FIt("creates a new resource check container", func() {
+	//			creatingContainer, createErr = containerFactory.FindOrCreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "some-new-step-name")
+	//			Expect(createErr).ToNot(HaveOccurred())
+	//
+	//			_, found, err := containerFactory.FindContainer(creatingContainer.Handle)
+	//			Expect(err).NotTo(HaveOccurred())
+	//			//Expect(foundContainer.Handle).To(Equal(creatingContainer.Handle))
+	//			Expect(found).To(BeTrue())
+	//		})
+	//
+	//		Context("when the container already exists", func() {
+	//			It("returns that container", func() {
+	//				foundCreatingContianer, err := containerFactory.FindOrCreateResourceCheckContainer(defaultWorker, defaultResourceConfig, "some-existing-step-name")
+	//				Expect(err).ToNot(HaveOccurred())
+	//				Expect(foundCreatingContianer).To(Equal(creatingContainer))
+	//			})
+	//		})
+	//	})
+	//
+	//})
 })

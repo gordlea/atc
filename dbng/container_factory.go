@@ -1,9 +1,9 @@
 package dbng
 
 import (
-	"database/sql"
-
 	sq "github.com/Masterminds/squirrel"
+
+	"database/sql"
 
 	"github.com/concourse/atc"
 	"github.com/nu7hatch/gouuid"
@@ -24,7 +24,7 @@ type ContainerMetadata struct {
 	Name string
 }
 
-func (factory *ContainerFactory) FindOrCreateResourceCheckContainer(
+func (factory *ContainerFactory) CreateResourceCheckContainer(
 	worker *Worker,
 	resourceConfig *UsedResourceConfig,
 	stepName string,
@@ -79,6 +79,8 @@ func (factory *ContainerFactory) FindOrCreateResourceCheckContainer(
 		conn:       factory.conn,
 	}, nil
 }
+
+
 
 func (factory *ContainerFactory) ContainerCreated(
 	container *CreatingContainer,
@@ -353,7 +355,8 @@ func (factory *ContainerFactory) CreateResourceGetContainer(
 	}, nil
 }
 
-func (factory *ContainerFactory) FindOrCreateBuildContainer(
+
+func (factory *ContainerFactory) CreateBuildContainer(
 	worker *Worker,
 	build *Build,
 	planID atc.PlanID,
@@ -362,11 +365,7 @@ func (factory *ContainerFactory) FindOrCreateBuildContainer(
 	return factory.createPlanContainer(worker, build, planID, meta)
 }
 
-func (factory *ContainerFactory) FindContainer(
-	handle string,
-) (*CreatedContainer, bool, error) {
-	return factory.findContainer(handle)
-}
+
 
 func (factory *ContainerFactory) createPlanContainer(
 	worker *Worker,
@@ -427,38 +426,93 @@ func (factory *ContainerFactory) createPlanContainer(
 	}, nil
 }
 
-func (factory *ContainerFactory) findContainer(handle string) (*CreatedContainer, bool, error) {
+func (factory *ContainerFactory) FindContainer(workerName string, stepName string) (*CreatingContainer, *CreatedContainer, error) {
 	tx, err := factory.conn.Begin()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
 	defer tx.Rollback()
 
-	var containerID int
-	err = psql.Select("id").
+	var (
+		id     int
+		state  string
+		handle string
+	)
+
+	err = psql.Select("id", "state", "handle").
 		From("containers").
 		Where(sq.Eq{
-			"state":  ContainerStateCreated,
-			"handle": handle,
+			"worker_name": workerName,
+			"step_name":   stepName,
 		}).
 		RunWith(tx).
 		QueryRow().
-		Scan(&containerID)
+		Scan(&id, &state, &handle)
+
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, false, nil
+			return nil, nil, nil
 		}
-		return nil, false, err
+		return nil, nil, err
 	}
-
 	err = tx.Commit()
 	if err != nil {
-		return nil, false, err
+		return nil, nil, err
 	}
 
-	return &CreatedContainer{
-		ID:   containerID,
-		conn: factory.conn,
-	}, true, nil
+	switch state {
+	case ContainerStateCreating:
+		return &CreatingContainer{
+			ID: id,
+			Handle: handle,
+			WorkerName: workerName,
+			conn: factory.conn,
+		}, nil, nil
+	case ContainerStateCreated:
+		return nil, &CreatedContainer{
+			ID: id,
+			Handle: handle,
+			WorkerName: workerName,
+			conn: factory.conn,
+		}, nil
+	}
+
+	return nil, nil, nil
 }
+
+//func (factory *ContainerFactory) findContainer(handle string) (*CreatedContainer, bool, error) {
+//	tx, err := factory.conn.Begin()
+//	if err != nil {
+//		return nil, false, err
+//	}
+//
+//	defer tx.Rollback()
+//
+//	var containerID int
+//	err = psql.Select("id").
+//		From("containers").
+//		Where(sq.Eq{
+//			"state":  ContainerStateCreated,
+//			"handle": handle,
+//		}).
+//		RunWith(tx).
+//		QueryRow().
+//		Scan(&containerID)
+//	if err != nil {
+//		if err == sql.ErrNoRows {
+//			return nil, false, nil
+//		}
+//		return nil, false, err
+//	}
+//
+//	err = tx.Commit()
+//	if err != nil {
+//		return nil, false, err
+//	}
+//
+//	return &CreatedContainer{
+//		ID:   containerID,
+//		conn: factory.conn,
+//	}, true, nil
+//}
