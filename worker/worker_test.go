@@ -368,7 +368,7 @@ var _ = Describe("Worker", func() {
 		Context("adding creating container to the db succeeds", func() {
 			BeforeEach(func() {
 				fakeCreatingContainer := &dbng.CreatingContainer{ID: 42}
-				fakeDBContainerFactory.FindOrCreateBuildContainerReturns(fakeCreatingContainer, nil)
+				fakeDBContainerFactory.CreateBuildContainerReturns(fakeCreatingContainer, nil)
 			})
 
 			It("delegates container creation to the container provider", func() {
@@ -390,7 +390,7 @@ var _ = Describe("Worker", func() {
 
 		Context("adding creating container to the db fails", func() {
 			BeforeEach(func() {
-				fakeDBContainerFactory.FindOrCreateBuildContainerReturns(nil, errors.New("uh oh"))
+				fakeDBContainerFactory.CreateBuildContainerReturns(nil, errors.New("uh oh"))
 			})
 
 			It("returns the error from dbContainerFactory", func() {
@@ -451,7 +451,7 @@ var _ = Describe("Worker", func() {
 
 				fakeContainerProvider.FindContainerByHandleReturns(fakeWorkerContainer, true, nil)
 
-				fakeDBContainerFactory.FindContainerReturns(&dbng.CreatedContainer{}, true, nil)
+				fakeDBContainerFactory.FindContainerReturns(nil, &dbng.CreatedContainer{}, nil)
 				fakeGardenWorkerDB.GetContainerReturns(fakeSavedContainer, true, nil)
 			})
 

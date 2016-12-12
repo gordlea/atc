@@ -57,12 +57,25 @@ type Worker interface {
 //go:generate counterfeiter . DBContainerFactory
 
 type DBContainerFactory interface {
-	FindOrCreateBuildContainer(
+	FindBuildContainer(
+		workerName string,
+		buildID int,
+		planID atc.PlanID,
+		meta dbng.ContainerMetadata,
+	) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
+
+	CreateBuildContainer(
 		worker *dbng.Worker,
 		build *dbng.Build,
 		planID atc.PlanID,
 		meta dbng.ContainerMetadata,
 	) (*dbng.CreatingContainer, error)
+
+	FindResourceGetContainer(
+		workerName string,
+		resourceCacheID int,
+		stepName string,
+	) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
 
 	CreateResourceGetContainer(
 		worker *dbng.Worker,
@@ -70,13 +83,19 @@ type DBContainerFactory interface {
 		stepName string,
 	) (*dbng.CreatingContainer, error)
 
-	FindOrCreateResourceCheckContainer(
+	FindResourceCheckContainer(
+		workerName string,
+		resourceConfigID int,
+		stepName string,
+	) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
+
+	CreateResourceCheckContainer(
 		worker *dbng.Worker,
 		resourceConfig *dbng.UsedResourceConfig,
 		stepName string,
 	) (*dbng.CreatingContainer, error)
 
-	FindContainer(handle string) (*dbng.CreatedContainer, bool, error)
+	FindContainer(handle string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
 	ContainerCreated(*dbng.CreatingContainer) (*dbng.CreatedContainer, error)
 }
 
@@ -226,17 +245,11 @@ func (worker *gardenWorker) FindOrCreateBuildContainer(
 		creatingContainer *dbng.CreatingContainer
 		createdContainer  *dbng.CreatedContainer
 		err               error
-		handle            string
 	)
 
 	creatingContainer, createdContainer, err = worker.dbContainerFactory.FindBuildContainer(
-		&dbng.Worker{
-			Name:       worker.name,
-			GardenAddr: &worker.addr,
-		},
-		&dbng.Build{
-			ID: id.BuildID,
-		},
+		worker.name,
+		id.BuildID,
 		id.PlanID,
 		dbng.ContainerMetadata{
 			Name: metadata.StepName,
@@ -248,7 +261,7 @@ func (worker *gardenWorker) FindOrCreateBuildContainer(
 		return nil, err
 	}
 
-	if creatingContainer != nil && createdContainer != nil {
+	if creatingContainer == nil && createdContainer == nil {
 		creatingContainer, err = worker.dbContainerFactory.CreateBuildContainer(
 			&dbng.Worker{
 				Name:       worker.name,
@@ -263,16 +276,19 @@ func (worker *gardenWorker) FindOrCreateBuildContainer(
 				Type: string(metadata.Type),
 			},
 		)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	containerProvider := worker.containerProviderFactory.ContainerProviderFor(worker)
-
-	containerProvider.FindContainerByHandle(logger, handle)
 
 	return containerProvider.FindOrCreateContainer(
 		logger,
 		cancel,
 		creatingContainer,
+		createdContainer,
 		delegate,
 		id,
 		metadata,
@@ -349,24 +365,30 @@ func (worker *gardenWorker) FindOrCreateResourceGetContainer(
 		}
 	}
 
-	creatingContainer, err := worker.dbContainerFactory.CreateResourceGetContainer(
-		&dbng.Worker{
-			Name:       worker.name,
-			GardenAddr: &worker.addr,
-		},
-		resourceCache,
-		metadata.StepName,
-	)
+	creatingContainer, createdContainer, err := worker.dbContainerFactory.FindResourceGetContainer(worker.name, resourceCache.ID, metadata.StepName)
 
-	if err != nil {
-		return nil, err
+	if creatingContainer == nil && createdContainer == nil {
+		creatingContainer, err = worker.dbContainerFactory.CreateResourceGetContainer(
+			&dbng.Worker{
+				Name:       worker.name,
+				GardenAddr: &worker.addr,
+			},
+			resourceCache,
+			metadata.StepName,
+		)
+
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	containerProvider := worker.containerProviderFactory.ContainerProviderFor(worker)
+
 	return containerProvider.FindOrCreateContainer(
 		logger,
 		cancel,
 		creatingContainer,
+		createdContainer,
 		delegate,
 		id,
 		metadata,
@@ -402,21 +424,29 @@ func (worker *gardenWorker) FindOrCreateResourceCheckContainer(
 		return nil, err
 	}
 
-	creatingContainer, err := worker.dbContainerFactory.FindOrCreateResourceCheckContainer(
-		&dbng.Worker{
-			Name:       worker.name,
-			GardenAddr: &worker.addr,
-		},
-		resourceConfig,
+	creatingContainer, createdContainer, err := worker.dbContainerFactory.FindResourceCheckContainer(
+		worker.name,
+		resourceConfig.ID,
 		metadata.StepName,
 	)
-	if err != nil {
-		logger.Error("failed-to-create-check-container", err)
-		return nil, err
+
+	if creatingContainer == nil && createdContainer == nil {
+		creatingContainer, err = worker.dbContainerFactory.CreateResourceCheckContainer(
+			&dbng.Worker{
+				Name:       worker.name,
+				GardenAddr: &worker.addr,
+			},
+			resourceConfig,
+			metadata.StepName,
+		)
+		if err != nil {
+			logger.Error("failed-to-create-check-container", err)
+			return nil, err
+		}
 	}
 
 	containerProvider := worker.containerProviderFactory.ContainerProviderFor(worker)
-	return containerProvider.FindOrCreateContainer(logger, cancel, creatingContainer, delegate, id, metadata, spec, resourceTypes, map[string]string{})
+	return containerProvider.FindOrCreateContainer(logger, cancel, creatingContainer, createdContainer, delegate, id, metadata, spec, resourceTypes, map[string]string{})
 }
 
 func (worker *gardenWorker) FindOrCreateResourceTypeCheckContainer(
@@ -441,20 +471,25 @@ func (worker *gardenWorker) FindOrCreateResourceTypeCheckContainer(
 		return nil, err
 	}
 
-	creatingContainer, err := worker.dbContainerFactory.FindOrCreateResourceCheckContainer(
-		&dbng.Worker{
-			Name:       worker.name,
-			GardenAddr: &worker.addr,
-		},
-		resourceConfig,
-		metadata.StepName,
-	)
-	if err != nil {
-		return nil, err
+	creatingContainer, createdContainer, err := worker.dbContainerFactory.FindResourceCheckContainer(worker.name, resourceConfig.ID, metadata.StepName)
+
+	if creatingContainer == nil && createdContainer == nil {
+		creatingContainer, err = worker.dbContainerFactory.CreateResourceCheckContainer(
+			&dbng.Worker{
+				Name:       worker.name,
+				GardenAddr: &worker.addr,
+			},
+			resourceConfig,
+			metadata.StepName,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	containerProvider := worker.containerProviderFactory.ContainerProviderFor(worker)
-	return containerProvider.FindOrCreateContainer(logger, cancel, creatingContainer, delegate, id, metadata, spec, resourceTypes, map[string]string{})
+
+	return containerProvider.FindOrCreateContainer(logger, cancel, creatingContainer, createdContainer, delegate, id, metadata, spec, resourceTypes, map[string]string{})
 }
 
 func (worker *gardenWorker) FindOrCreateContainerForIdentifier(

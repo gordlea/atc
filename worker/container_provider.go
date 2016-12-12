@@ -94,6 +94,7 @@ type ContainerProvider interface {
 		logger lager.Logger,
 		cancel <-chan os.Signal,
 		creatingContainer *dbng.CreatingContainer,
+		createdContainer *dbng.CreatedContainer,
 		delegate ImageFetchingDelegate,
 		id Identifier,
 		metadata Metadata,
@@ -126,6 +127,7 @@ func (p *containerProvider) FindOrCreateContainer(
 	logger lager.Logger,
 	cancel <-chan os.Signal,
 	creatingContainer *dbng.CreatingContainer,
+	createdContainer *dbng.CreatedContainer,
 	delegate ImageFetchingDelegate,
 	id Identifier,
 	metadata Metadata,
@@ -133,6 +135,16 @@ func (p *containerProvider) FindOrCreateContainer(
 	resourceTypes atc.ResourceTypes,
 	outputPaths map[string]string,
 ) (Container, error) {
+	container, found, err := p.findGardenContainer(logger, createdContainer, creatingContainer)
+
+	if err != nil {
+		return container, err
+	}
+
+	if found {
+		return container, nil
+	}
+
 	return p.createContainer(
 		logger,
 		cancel,
@@ -150,6 +162,30 @@ func (p *containerProvider) FindContainerByHandle(
 	logger lager.Logger,
 	handle string,
 ) (Container, bool, error) {
+	creatingContainer, createdContainer, err := p.dbContainerFactory.FindContainer(handle)
+	if err != nil {
+		logger.Error("failed-to-lookup-in-db", err)
+		return nil, false, err
+	}
+
+	return p.findGardenContainer(logger, createdContainer, creatingContainer)
+}
+
+func (p *containerProvider) findGardenContainer(
+	logger lager.Logger,
+	createdContainer *dbng.CreatedContainer,
+	creatingContainer *dbng.CreatingContainer,
+) (Container, bool, error) {
+	var handle string
+
+	if creatingContainer != nil {
+		handle = creatingContainer.Handle
+	}
+
+	if createdContainer != nil {
+		handle = createdContainer.Handle
+	}
+
 	gardenContainer, err := p.gardenClient.Lookup(handle)
 	if err != nil {
 		if _, ok := err.(garden.ContainerNotFoundError); ok {
@@ -161,14 +197,12 @@ func (p *containerProvider) FindContainerByHandle(
 		return nil, false, err
 	}
 
-	createdContainer, found, err := p.dbContainerFactory.FindContainer(handle)
-	if err != nil {
-		logger.Error("failed-to-lookup-in-db", err)
-		return nil, false, err
-	}
-
-	if !found {
-		return nil, false, nil
+	if creatingContainer != nil {
+		createdContainer, err = p.dbContainerFactory.ContainerCreated(creatingContainer)
+		if err != nil {
+			logger.Error("failed-to-mark-container-as-created", err)
+			return nil, false, err
+		}
 	}
 
 	createdVolumes, err := p.dbVolumeFactory.FindVolumesForContainer(createdContainer.ID)

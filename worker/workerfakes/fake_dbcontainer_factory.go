@@ -10,17 +10,42 @@ import (
 )
 
 type FakeDBContainerFactory struct {
-	FindOrCreateBuildContainerStub        func(worker *dbng.Worker, build *dbng.Build, planID atc.PlanID, meta dbng.ContainerMetadata) (*dbng.CreatingContainer, error)
-	findOrCreateBuildContainerMutex       sync.RWMutex
-	findOrCreateBuildContainerArgsForCall []struct {
+	FindBuildContainerStub        func(workerName string, buildID int, planID atc.PlanID, meta dbng.ContainerMetadata) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
+	findBuildContainerMutex       sync.RWMutex
+	findBuildContainerArgsForCall []struct {
+		workerName string
+		buildID    int
+		planID     atc.PlanID
+		meta       dbng.ContainerMetadata
+	}
+	findBuildContainerReturns struct {
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
+		result3 error
+	}
+	CreateBuildContainerStub        func(worker *dbng.Worker, build *dbng.Build, planID atc.PlanID, meta dbng.ContainerMetadata) (*dbng.CreatingContainer, error)
+	createBuildContainerMutex       sync.RWMutex
+	createBuildContainerArgsForCall []struct {
 		worker *dbng.Worker
 		build  *dbng.Build
 		planID atc.PlanID
 		meta   dbng.ContainerMetadata
 	}
-	findOrCreateBuildContainerReturns struct {
+	createBuildContainerReturns struct {
 		result1 *dbng.CreatingContainer
 		result2 error
+	}
+	FindResourceGetContainerStub        func(workerName string, resourceCacheID int, stepName string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
+	findResourceGetContainerMutex       sync.RWMutex
+	findResourceGetContainerArgsForCall []struct {
+		workerName      string
+		resourceCacheID int
+		stepName        string
+	}
+	findResourceGetContainerReturns struct {
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
+		result3 error
 	}
 	CreateResourceGetContainerStub        func(worker *dbng.Worker, resourceCache *dbng.UsedResourceCache, stepName string) (*dbng.CreatingContainer, error)
 	createResourceGetContainerMutex       sync.RWMutex
@@ -33,25 +58,37 @@ type FakeDBContainerFactory struct {
 		result1 *dbng.CreatingContainer
 		result2 error
 	}
-	FindOrCreateResourceCheckContainerStub        func(worker *dbng.Worker, resourceConfig *dbng.UsedResourceConfig, stepName string) (*dbng.CreatingContainer, error)
-	findOrCreateResourceCheckContainerMutex       sync.RWMutex
-	findOrCreateResourceCheckContainerArgsForCall []struct {
+	FindResourceCheckContainerStub        func(workerName string, resourceConfigID int, stepName string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
+	findResourceCheckContainerMutex       sync.RWMutex
+	findResourceCheckContainerArgsForCall []struct {
+		workerName       string
+		resourceConfigID int
+		stepName         string
+	}
+	findResourceCheckContainerReturns struct {
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
+		result3 error
+	}
+	CreateResourceCheckContainerStub        func(worker *dbng.Worker, resourceConfig *dbng.UsedResourceConfig, stepName string) (*dbng.CreatingContainer, error)
+	createResourceCheckContainerMutex       sync.RWMutex
+	createResourceCheckContainerArgsForCall []struct {
 		worker         *dbng.Worker
 		resourceConfig *dbng.UsedResourceConfig
 		stepName       string
 	}
-	findOrCreateResourceCheckContainerReturns struct {
+	createResourceCheckContainerReturns struct {
 		result1 *dbng.CreatingContainer
 		result2 error
 	}
-	FindContainerStub        func(handle string) (*dbng.CreatedContainer, bool, error)
+	FindContainerStub        func(handle string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error)
 	findContainerMutex       sync.RWMutex
 	findContainerArgsForCall []struct {
 		handle string
 	}
 	findContainerReturns struct {
-		result1 *dbng.CreatedContainer
-		result2 bool
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
 		result3 error
 	}
 	ContainerCreatedStub        func(*dbng.CreatingContainer) (*dbng.CreatedContainer, error)
@@ -67,41 +104,116 @@ type FakeDBContainerFactory struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateBuildContainer(worker *dbng.Worker, build *dbng.Build, planID atc.PlanID, meta dbng.ContainerMetadata) (*dbng.CreatingContainer, error) {
-	fake.findOrCreateBuildContainerMutex.Lock()
-	fake.findOrCreateBuildContainerArgsForCall = append(fake.findOrCreateBuildContainerArgsForCall, struct {
+func (fake *FakeDBContainerFactory) FindBuildContainer(workerName string, buildID int, planID atc.PlanID, meta dbng.ContainerMetadata) (*dbng.CreatingContainer, *dbng.CreatedContainer, error) {
+	fake.findBuildContainerMutex.Lock()
+	fake.findBuildContainerArgsForCall = append(fake.findBuildContainerArgsForCall, struct {
+		workerName string
+		buildID    int
+		planID     atc.PlanID
+		meta       dbng.ContainerMetadata
+	}{workerName, buildID, planID, meta})
+	fake.recordInvocation("FindBuildContainer", []interface{}{workerName, buildID, planID, meta})
+	fake.findBuildContainerMutex.Unlock()
+	if fake.FindBuildContainerStub != nil {
+		return fake.FindBuildContainerStub(workerName, buildID, planID, meta)
+	} else {
+		return fake.findBuildContainerReturns.result1, fake.findBuildContainerReturns.result2, fake.findBuildContainerReturns.result3
+	}
+}
+
+func (fake *FakeDBContainerFactory) FindBuildContainerCallCount() int {
+	fake.findBuildContainerMutex.RLock()
+	defer fake.findBuildContainerMutex.RUnlock()
+	return len(fake.findBuildContainerArgsForCall)
+}
+
+func (fake *FakeDBContainerFactory) FindBuildContainerArgsForCall(i int) (string, int, atc.PlanID, dbng.ContainerMetadata) {
+	fake.findBuildContainerMutex.RLock()
+	defer fake.findBuildContainerMutex.RUnlock()
+	return fake.findBuildContainerArgsForCall[i].workerName, fake.findBuildContainerArgsForCall[i].buildID, fake.findBuildContainerArgsForCall[i].planID, fake.findBuildContainerArgsForCall[i].meta
+}
+
+func (fake *FakeDBContainerFactory) FindBuildContainerReturns(result1 *dbng.CreatingContainer, result2 *dbng.CreatedContainer, result3 error) {
+	fake.FindBuildContainerStub = nil
+	fake.findBuildContainerReturns = struct {
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *FakeDBContainerFactory) CreateBuildContainer(worker *dbng.Worker, build *dbng.Build, planID atc.PlanID, meta dbng.ContainerMetadata) (*dbng.CreatingContainer, error) {
+	fake.createBuildContainerMutex.Lock()
+	fake.createBuildContainerArgsForCall = append(fake.createBuildContainerArgsForCall, struct {
 		worker *dbng.Worker
 		build  *dbng.Build
 		planID atc.PlanID
 		meta   dbng.ContainerMetadata
 	}{worker, build, planID, meta})
-	fake.recordInvocation("FindOrCreateBuildContainer", []interface{}{worker, build, planID, meta})
-	fake.findOrCreateBuildContainerMutex.Unlock()
-	if fake.FindOrCreateBuildContainerStub != nil {
-		return fake.FindOrCreateBuildContainerStub(worker, build, planID, meta)
+	fake.recordInvocation("CreateBuildContainer", []interface{}{worker, build, planID, meta})
+	fake.createBuildContainerMutex.Unlock()
+	if fake.CreateBuildContainerStub != nil {
+		return fake.CreateBuildContainerStub(worker, build, planID, meta)
 	} else {
-		return fake.findOrCreateBuildContainerReturns.result1, fake.findOrCreateBuildContainerReturns.result2
+		return fake.createBuildContainerReturns.result1, fake.createBuildContainerReturns.result2
 	}
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateBuildContainerCallCount() int {
-	fake.findOrCreateBuildContainerMutex.RLock()
-	defer fake.findOrCreateBuildContainerMutex.RUnlock()
-	return len(fake.findOrCreateBuildContainerArgsForCall)
+func (fake *FakeDBContainerFactory) CreateBuildContainerCallCount() int {
+	fake.createBuildContainerMutex.RLock()
+	defer fake.createBuildContainerMutex.RUnlock()
+	return len(fake.createBuildContainerArgsForCall)
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateBuildContainerArgsForCall(i int) (*dbng.Worker, *dbng.Build, atc.PlanID, dbng.ContainerMetadata) {
-	fake.findOrCreateBuildContainerMutex.RLock()
-	defer fake.findOrCreateBuildContainerMutex.RUnlock()
-	return fake.findOrCreateBuildContainerArgsForCall[i].worker, fake.findOrCreateBuildContainerArgsForCall[i].build, fake.findOrCreateBuildContainerArgsForCall[i].planID, fake.findOrCreateBuildContainerArgsForCall[i].meta
+func (fake *FakeDBContainerFactory) CreateBuildContainerArgsForCall(i int) (*dbng.Worker, *dbng.Build, atc.PlanID, dbng.ContainerMetadata) {
+	fake.createBuildContainerMutex.RLock()
+	defer fake.createBuildContainerMutex.RUnlock()
+	return fake.createBuildContainerArgsForCall[i].worker, fake.createBuildContainerArgsForCall[i].build, fake.createBuildContainerArgsForCall[i].planID, fake.createBuildContainerArgsForCall[i].meta
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateBuildContainerReturns(result1 *dbng.CreatingContainer, result2 error) {
-	fake.FindOrCreateBuildContainerStub = nil
-	fake.findOrCreateBuildContainerReturns = struct {
+func (fake *FakeDBContainerFactory) CreateBuildContainerReturns(result1 *dbng.CreatingContainer, result2 error) {
+	fake.CreateBuildContainerStub = nil
+	fake.createBuildContainerReturns = struct {
 		result1 *dbng.CreatingContainer
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeDBContainerFactory) FindResourceGetContainer(workerName string, resourceCacheID int, stepName string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error) {
+	fake.findResourceGetContainerMutex.Lock()
+	fake.findResourceGetContainerArgsForCall = append(fake.findResourceGetContainerArgsForCall, struct {
+		workerName      string
+		resourceCacheID int
+		stepName        string
+	}{workerName, resourceCacheID, stepName})
+	fake.recordInvocation("FindResourceGetContainer", []interface{}{workerName, resourceCacheID, stepName})
+	fake.findResourceGetContainerMutex.Unlock()
+	if fake.FindResourceGetContainerStub != nil {
+		return fake.FindResourceGetContainerStub(workerName, resourceCacheID, stepName)
+	} else {
+		return fake.findResourceGetContainerReturns.result1, fake.findResourceGetContainerReturns.result2, fake.findResourceGetContainerReturns.result3
+	}
+}
+
+func (fake *FakeDBContainerFactory) FindResourceGetContainerCallCount() int {
+	fake.findResourceGetContainerMutex.RLock()
+	defer fake.findResourceGetContainerMutex.RUnlock()
+	return len(fake.findResourceGetContainerArgsForCall)
+}
+
+func (fake *FakeDBContainerFactory) FindResourceGetContainerArgsForCall(i int) (string, int, string) {
+	fake.findResourceGetContainerMutex.RLock()
+	defer fake.findResourceGetContainerMutex.RUnlock()
+	return fake.findResourceGetContainerArgsForCall[i].workerName, fake.findResourceGetContainerArgsForCall[i].resourceCacheID, fake.findResourceGetContainerArgsForCall[i].stepName
+}
+
+func (fake *FakeDBContainerFactory) FindResourceGetContainerReturns(result1 *dbng.CreatingContainer, result2 *dbng.CreatedContainer, result3 error) {
+	fake.FindResourceGetContainerStub = nil
+	fake.findResourceGetContainerReturns = struct {
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeDBContainerFactory) CreateResourceGetContainer(worker *dbng.Worker, resourceCache *dbng.UsedResourceCache, stepName string) (*dbng.CreatingContainer, error) {
@@ -140,43 +252,80 @@ func (fake *FakeDBContainerFactory) CreateResourceGetContainerReturns(result1 *d
 	}{result1, result2}
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateResourceCheckContainer(worker *dbng.Worker, resourceConfig *dbng.UsedResourceConfig, stepName string) (*dbng.CreatingContainer, error) {
-	fake.findOrCreateResourceCheckContainerMutex.Lock()
-	fake.findOrCreateResourceCheckContainerArgsForCall = append(fake.findOrCreateResourceCheckContainerArgsForCall, struct {
+func (fake *FakeDBContainerFactory) FindResourceCheckContainer(workerName string, resourceConfigID int, stepName string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error) {
+	fake.findResourceCheckContainerMutex.Lock()
+	fake.findResourceCheckContainerArgsForCall = append(fake.findResourceCheckContainerArgsForCall, struct {
+		workerName       string
+		resourceConfigID int
+		stepName         string
+	}{workerName, resourceConfigID, stepName})
+	fake.recordInvocation("FindResourceCheckContainer", []interface{}{workerName, resourceConfigID, stepName})
+	fake.findResourceCheckContainerMutex.Unlock()
+	if fake.FindResourceCheckContainerStub != nil {
+		return fake.FindResourceCheckContainerStub(workerName, resourceConfigID, stepName)
+	} else {
+		return fake.findResourceCheckContainerReturns.result1, fake.findResourceCheckContainerReturns.result2, fake.findResourceCheckContainerReturns.result3
+	}
+}
+
+func (fake *FakeDBContainerFactory) FindResourceCheckContainerCallCount() int {
+	fake.findResourceCheckContainerMutex.RLock()
+	defer fake.findResourceCheckContainerMutex.RUnlock()
+	return len(fake.findResourceCheckContainerArgsForCall)
+}
+
+func (fake *FakeDBContainerFactory) FindResourceCheckContainerArgsForCall(i int) (string, int, string) {
+	fake.findResourceCheckContainerMutex.RLock()
+	defer fake.findResourceCheckContainerMutex.RUnlock()
+	return fake.findResourceCheckContainerArgsForCall[i].workerName, fake.findResourceCheckContainerArgsForCall[i].resourceConfigID, fake.findResourceCheckContainerArgsForCall[i].stepName
+}
+
+func (fake *FakeDBContainerFactory) FindResourceCheckContainerReturns(result1 *dbng.CreatingContainer, result2 *dbng.CreatedContainer, result3 error) {
+	fake.FindResourceCheckContainerStub = nil
+	fake.findResourceCheckContainerReturns = struct {
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *FakeDBContainerFactory) CreateResourceCheckContainer(worker *dbng.Worker, resourceConfig *dbng.UsedResourceConfig, stepName string) (*dbng.CreatingContainer, error) {
+	fake.createResourceCheckContainerMutex.Lock()
+	fake.createResourceCheckContainerArgsForCall = append(fake.createResourceCheckContainerArgsForCall, struct {
 		worker         *dbng.Worker
 		resourceConfig *dbng.UsedResourceConfig
 		stepName       string
 	}{worker, resourceConfig, stepName})
-	fake.recordInvocation("FindOrCreateResourceCheckContainer", []interface{}{worker, resourceConfig, stepName})
-	fake.findOrCreateResourceCheckContainerMutex.Unlock()
-	if fake.FindOrCreateResourceCheckContainerStub != nil {
-		return fake.FindOrCreateResourceCheckContainerStub(worker, resourceConfig, stepName)
+	fake.recordInvocation("CreateResourceCheckContainer", []interface{}{worker, resourceConfig, stepName})
+	fake.createResourceCheckContainerMutex.Unlock()
+	if fake.CreateResourceCheckContainerStub != nil {
+		return fake.CreateResourceCheckContainerStub(worker, resourceConfig, stepName)
 	} else {
-		return fake.findOrCreateResourceCheckContainerReturns.result1, fake.findOrCreateResourceCheckContainerReturns.result2
+		return fake.createResourceCheckContainerReturns.result1, fake.createResourceCheckContainerReturns.result2
 	}
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateResourceCheckContainerCallCount() int {
-	fake.findOrCreateResourceCheckContainerMutex.RLock()
-	defer fake.findOrCreateResourceCheckContainerMutex.RUnlock()
-	return len(fake.findOrCreateResourceCheckContainerArgsForCall)
+func (fake *FakeDBContainerFactory) CreateResourceCheckContainerCallCount() int {
+	fake.createResourceCheckContainerMutex.RLock()
+	defer fake.createResourceCheckContainerMutex.RUnlock()
+	return len(fake.createResourceCheckContainerArgsForCall)
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateResourceCheckContainerArgsForCall(i int) (*dbng.Worker, *dbng.UsedResourceConfig, string) {
-	fake.findOrCreateResourceCheckContainerMutex.RLock()
-	defer fake.findOrCreateResourceCheckContainerMutex.RUnlock()
-	return fake.findOrCreateResourceCheckContainerArgsForCall[i].worker, fake.findOrCreateResourceCheckContainerArgsForCall[i].resourceConfig, fake.findOrCreateResourceCheckContainerArgsForCall[i].stepName
+func (fake *FakeDBContainerFactory) CreateResourceCheckContainerArgsForCall(i int) (*dbng.Worker, *dbng.UsedResourceConfig, string) {
+	fake.createResourceCheckContainerMutex.RLock()
+	defer fake.createResourceCheckContainerMutex.RUnlock()
+	return fake.createResourceCheckContainerArgsForCall[i].worker, fake.createResourceCheckContainerArgsForCall[i].resourceConfig, fake.createResourceCheckContainerArgsForCall[i].stepName
 }
 
-func (fake *FakeDBContainerFactory) FindOrCreateResourceCheckContainerReturns(result1 *dbng.CreatingContainer, result2 error) {
-	fake.FindOrCreateResourceCheckContainerStub = nil
-	fake.findOrCreateResourceCheckContainerReturns = struct {
+func (fake *FakeDBContainerFactory) CreateResourceCheckContainerReturns(result1 *dbng.CreatingContainer, result2 error) {
+	fake.CreateResourceCheckContainerStub = nil
+	fake.createResourceCheckContainerReturns = struct {
 		result1 *dbng.CreatingContainer
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeDBContainerFactory) FindContainer(handle string) (*dbng.CreatedContainer, bool, error) {
+func (fake *FakeDBContainerFactory) FindContainer(handle string) (*dbng.CreatingContainer, *dbng.CreatedContainer, error) {
 	fake.findContainerMutex.Lock()
 	fake.findContainerArgsForCall = append(fake.findContainerArgsForCall, struct {
 		handle string
@@ -202,11 +351,11 @@ func (fake *FakeDBContainerFactory) FindContainerArgsForCall(i int) string {
 	return fake.findContainerArgsForCall[i].handle
 }
 
-func (fake *FakeDBContainerFactory) FindContainerReturns(result1 *dbng.CreatedContainer, result2 bool, result3 error) {
+func (fake *FakeDBContainerFactory) FindContainerReturns(result1 *dbng.CreatingContainer, result2 *dbng.CreatedContainer, result3 error) {
 	fake.FindContainerStub = nil
 	fake.findContainerReturns = struct {
-		result1 *dbng.CreatedContainer
-		result2 bool
+		result1 *dbng.CreatingContainer
+		result2 *dbng.CreatedContainer
 		result3 error
 	}{result1, result2, result3}
 }
@@ -248,12 +397,18 @@ func (fake *FakeDBContainerFactory) ContainerCreatedReturns(result1 *dbng.Create
 func (fake *FakeDBContainerFactory) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.findOrCreateBuildContainerMutex.RLock()
-	defer fake.findOrCreateBuildContainerMutex.RUnlock()
+	fake.findBuildContainerMutex.RLock()
+	defer fake.findBuildContainerMutex.RUnlock()
+	fake.createBuildContainerMutex.RLock()
+	defer fake.createBuildContainerMutex.RUnlock()
+	fake.findResourceGetContainerMutex.RLock()
+	defer fake.findResourceGetContainerMutex.RUnlock()
 	fake.createResourceGetContainerMutex.RLock()
 	defer fake.createResourceGetContainerMutex.RUnlock()
-	fake.findOrCreateResourceCheckContainerMutex.RLock()
-	defer fake.findOrCreateResourceCheckContainerMutex.RUnlock()
+	fake.findResourceCheckContainerMutex.RLock()
+	defer fake.findResourceCheckContainerMutex.RUnlock()
+	fake.createResourceCheckContainerMutex.RLock()
+	defer fake.createResourceCheckContainerMutex.RUnlock()
 	fake.findContainerMutex.RLock()
 	defer fake.findContainerMutex.RUnlock()
 	fake.containerCreatedMutex.RLock()

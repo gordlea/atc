@@ -70,6 +70,8 @@ var _ = BeforeSuite(func() {
 })
 
 var _ = BeforeEach(func() {
+	logger = lagertest.NewTestLogger("test")
+
 	postgresRunner.Truncate()
 	sqlDB = postgresRunner.Open()
 
@@ -122,10 +124,9 @@ var _ = BeforeEach(func() {
 	defaultUsedResourceType, err = resourceTypeFactory.CreateResourceType(defaultPipeline, resourceType, atc.Version{})
 	Expect(err).NotTo(HaveOccurred())
 
-	defaultResourceCacheForBuild, err = resourceCacheFactory.FindOrCreateResourceCacheForBuild(logger, defaultBuild, "some-resource-cache", atc.Version{}, atc.Source{}, atc.Params{}, defaultPipeline, atc.ResourceTypes{resourceType})
+	defaultResourceCacheForBuild, err = resourceCacheFactory.FindOrCreateResourceCacheForBuild(logger, defaultBuild, "some-base-resource-type", atc.Version{}, atc.Source{}, atc.Params{}, defaultPipeline, atc.ResourceTypes{resourceType})
 	Expect(err).NotTo(HaveOccurred())
 
-	logger = lagertest.NewTestLogger("test")
 	defaultResourceConfig, err = resourceConfigFactory.FindOrCreateResourceConfigForResource(logger, defaultResource, "some-base-resource-type", atc.Source{}, defaultPipeline, atc.ResourceTypes{})
 	Expect(err).NotTo(HaveOccurred())
 

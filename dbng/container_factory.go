@@ -303,7 +303,7 @@ func (factory *ContainerFactory) FindResourceGetContainer(
 	resourceCacheID int,
 	stepName string,
 ) (*CreatingContainer, *CreatedContainer, error) {
-	return factory.findContainer(workerName, sq.Eq{
+	return factory.findContainer(sq.Eq{
 		"worker_name":       workerName,
 		"step_name":         stepName,
 		"resource_cache_id": resourceCacheID,
@@ -369,14 +369,14 @@ func (factory *ContainerFactory) CreateResourceGetContainer(
 func (factory *ContainerFactory) FindBuildContainer(
 	workerName string,
 	buildID int,
-	planID string,
+	planID atc.PlanID,
 	meta ContainerMetadata,
 ) (*CreatingContainer, *CreatedContainer, error) {
 
-	return factory.findContainer(workerName, sq.Eq{
+	return factory.findContainer(sq.Eq{
 		"worker_name": workerName,
 		"build_id":    buildID,
-		"plan_id":     planID,
+		"plan_id":     string(planID),
 		"type":        meta.Type,
 	})
 }
@@ -449,8 +449,8 @@ func (factory *ContainerFactory) createPlanContainer(
 	}, nil
 }
 
-func (f *ContainerFactory) FindResourceCheckContainer(workerName string, resourceConfigID int, stepName string) (*CreatingContainer, *CreatedContainer, error) {
-	return f.findContainer(workerName, sq.Eq{
+func (factory *ContainerFactory) FindResourceCheckContainer(workerName string, resourceConfigID int, stepName string) (*CreatingContainer, *CreatedContainer, error) {
+	return factory.findContainer(sq.Eq{
 		"worker_name":        workerName,
 		"step_name":          stepName,
 		"resource_config_id": resourceConfigID,
@@ -458,7 +458,13 @@ func (f *ContainerFactory) FindResourceCheckContainer(workerName string, resourc
 	})
 }
 
-func (factory *ContainerFactory) findContainer(workerName string, whereClause sq.Eq) (*CreatingContainer, *CreatedContainer, error) {
+func (factory *ContainerFactory) FindContainer(handle string) (*CreatingContainer, *CreatedContainer, error) {
+	return factory.findContainer(sq.Eq{
+		"handle": handle,
+	})
+}
+
+func (factory *ContainerFactory) findContainer(whereClause sq.Eq) (*CreatingContainer, *CreatedContainer, error) {
 	tx, err := factory.conn.Begin()
 	if err != nil {
 		return nil, nil, err
@@ -467,17 +473,18 @@ func (factory *ContainerFactory) findContainer(workerName string, whereClause sq
 	defer tx.Rollback()
 
 	var (
-		id     int
-		state  string
-		handle string
+		id         int
+		state      string
+		handle     string
+		workerName string
 	)
 
-	err = psql.Select("id", "state", "handle").
+	err = psql.Select("id", "state", "handle", "worker_name").
 		From("containers").
 		Where(whereClause).
 		RunWith(tx).
 		QueryRow().
-		Scan(&id, &state, &handle)
+		Scan(&id, &state, &handle, &workerName)
 
 	if err != nil {
 		if err == sql.ErrNoRows {

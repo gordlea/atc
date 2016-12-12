@@ -96,6 +96,7 @@ var _ = Describe("ContainerProvider", func() {
 				logger,
 				nil,
 				fakeCreatingContainer,
+				fakeCreatedContainer,
 				fakeImageFetchingDelegate,
 				Identifier{},
 				Metadata{},
@@ -114,16 +115,32 @@ var _ = Describe("ContainerProvider", func() {
 			)
 		})
 
-		XContext("there is an existing container matching", func() {
-
-		})
+		// Context("there is an existing creating container", func() {
+		//
+		// 	BeforeEach(func() {
+		//
+		// 	})
+		//
+		// })
+		//
+		// Context("there is an existing created container", func() {
+		//
+		// 	BeforeEach(func() {
+		//
+		// 	})
+		//
+		// })
 
 		Context("a new container is needed", func() {
 
 			var fakeGardenContainer *gfakes.FakeContainer
 
 			BeforeEach(func() {
+
 				fakeDBContainerFactory.ContainerCreatedReturns(fakeCreatedContainer, nil)
+
+				fakeGardenClient.LookupReturns(nil, garden.ContainerNotFoundError{})
+
 				fakeGardenContainer = new(gfakes.FakeContainer)
 				fakeGardenContainer.HandleReturns("some-handle")
 				fakeGardenClient.CreateReturns(fakeGardenContainer, nil)
@@ -415,217 +432,290 @@ var _ = Describe("ContainerProvider", func() {
 
 	Describe("FindContainerByHandle", func() {
 		var (
-			foundContainer Container
-			findErr        error
-			found          bool
+			foundContainer    Container
+			creatingContainer *dbng.CreatingContainer
+			createdContainer  *dbng.CreatedContainer
+			findErr           error
+			found             bool
 		)
 
 		JustBeforeEach(func() {
 			foundContainer, found, findErr = containerProvider.FindContainerByHandle(logger, "some-container-handle")
 		})
 
-		Context("when the gardenClient returns a container and no error", func() {
-			var (
-				fakeContainer *gfakes.FakeContainer
-			)
-
+		Context("when a creating container for that handle exists", func() {
 			BeforeEach(func() {
-				fakeContainer = new(gfakes.FakeContainer)
-				fakeContainer.HandleReturns("provider-handle")
-
-				fakeDBVolumeFactory.FindVolumesForContainerReturns([]dbng.CreatedVolume{}, nil)
-
-				fakeDBContainerFactory.FindContainerReturns(&dbng.CreatedContainer{}, true, nil)
-				fakeGardenClient.LookupReturns(fakeContainer, nil)
+				creatingContainer = &dbng.CreatingContainer{ID: 123, Handle: "some-container-handle"}
+				fakeDBContainerFactory.FindContainerReturns(creatingContainer, nil, nil)
 			})
 
-			It("returns the container", func() {
-				Expect(findErr).NotTo(HaveOccurred())
-				Expect(found).To(BeTrue())
-				Expect(foundContainer.Handle()).To(Equal(fakeContainer.Handle()))
-			})
+			Context("and the gardenClient returns a container and no error", func() {
+				var (
+					fakeContainer *gfakes.FakeContainer
+				)
 
-			Describe("the found container", func() {
-				It("can be destroyed", func() {
-					err := foundContainer.Destroy()
-					Expect(err).NotTo(HaveOccurred())
+				Context("and moving the container to created state succeeds", func() {
 
-					By("destroying via garden")
-					Expect(fakeGardenClient.DestroyCallCount()).To(Equal(1))
-					Expect(fakeGardenClient.DestroyArgsForCall(0)).To(Equal("provider-handle"))
+					BeforeEach(func() {
+						fakeContainer = new(gfakes.FakeContainer)
+						fakeContainer.HandleReturns("some-container-handle")
+						fakeDBVolumeFactory.FindVolumesForContainerReturns([]dbng.CreatedVolume{}, nil)
+						fakeGardenClient.LookupReturns(fakeContainer, nil)
+						fakeDBContainerFactory.ContainerCreatedReturns(&dbng.CreatedContainer{ID: 123, Handle: "some-container-handle"}, nil)
+					})
+
+					It("transitions the container to a created container", func() {
+						Expect(fakeDBContainerFactory.ContainerCreatedCallCount()).To(Equal(1))
+						transitionedContainer := fakeDBContainerFactory.ContainerCreatedArgsForCall(0)
+						Expect(transitionedContainer).To(Equal(creatingContainer))
+					})
+
+					It("returns the container", func() {
+						Expect(findErr).NotTo(HaveOccurred())
+						Expect(found).To(BeTrue())
+						Expect(foundContainer.Handle()).To(Equal(fakeContainer.Handle()))
+						Expect(foundContainer.Handle()).To(Equal(creatingContainer.Handle))
+					})
 				})
 
-				It("can be released multiple times", func() {
-					foundContainer.Release()
+				Context("and moving the container to created state fails", func() {
+					BeforeEach(func() {
+						fakeDBContainerFactory.ContainerCreatedReturns(nil, errors.New("oh no!"))
+					})
 
-					Expect(func() {
+					It("returns the error", func() {
+						Expect(findErr).To(HaveOccurred())
+						Expect(findErr.Error()).To(Equal("oh no!"))
+						Expect(found).To(BeFalse())
+					})
+				})
+
+			})
+
+		})
+
+		Context("when a created container for that handle exists", func() {
+
+			BeforeEach(func() {
+				createdContainer = &dbng.CreatedContainer{ID: 123, Handle: "some-container-handle"}
+				fakeDBContainerFactory.FindContainerReturns(nil, createdContainer, nil)
+			})
+
+			Context("and the gardenClient returns a container and no error", func() {
+				var (
+					fakeContainer *gfakes.FakeContainer
+				)
+
+				BeforeEach(func() {
+					fakeContainer = new(gfakes.FakeContainer)
+					fakeContainer.HandleReturns("some-container-handle")
+
+					fakeDBVolumeFactory.FindVolumesForContainerReturns([]dbng.CreatedVolume{}, nil)
+
+					fakeGardenClient.LookupReturns(fakeContainer, nil)
+				})
+
+				It("returns the container", func() {
+					Expect(findErr).NotTo(HaveOccurred())
+					Expect(found).To(BeTrue())
+					Expect(foundContainer.Handle()).To(Equal(fakeContainer.Handle()))
+					Expect(foundContainer.Handle()).To(Equal(createdContainer.Handle))
+				})
+
+				Describe("the found container", func() {
+					It("can be destroyed", func() {
+						err := foundContainer.Destroy()
+						Expect(err).NotTo(HaveOccurred())
+
+						By("destroying via garden")
+						Expect(fakeGardenClient.DestroyCallCount()).To(Equal(1))
+						Expect(fakeGardenClient.DestroyArgsForCall(0)).To(Equal("some-container-handle"))
+					})
+
+					It("can be released multiple times", func() {
 						foundContainer.Release()
-					}).NotTo(Panic())
+
+						Expect(func() {
+							foundContainer.Release()
+						}).NotTo(Panic())
+					})
 				})
-			})
 
-			Context("when the concourse:volumes property is present", func() {
-				var (
-					handle1Volume         *baggageclaimfakes.FakeVolume
-					handle2Volume         *baggageclaimfakes.FakeVolume
-					expectedHandle1Volume Volume
-					expectedHandle2Volume Volume
-				)
+				Context("when the concourse:volumes property is present", func() {
+					var (
+						handle1Volume         *baggageclaimfakes.FakeVolume
+						handle2Volume         *baggageclaimfakes.FakeVolume
+						expectedHandle1Volume Volume
+						expectedHandle2Volume Volume
+					)
 
-				BeforeEach(func() {
-					handle1Volume = new(baggageclaimfakes.FakeVolume)
-					handle2Volume = new(baggageclaimfakes.FakeVolume)
+					BeforeEach(func() {
+						handle1Volume = new(baggageclaimfakes.FakeVolume)
+						handle2Volume = new(baggageclaimfakes.FakeVolume)
 
-					fakeVolume1 := new(dbngfakes.FakeCreatedVolume)
-					fakeVolume2 := new(dbngfakes.FakeCreatedVolume)
+						fakeVolume1 := new(dbngfakes.FakeCreatedVolume)
+						fakeVolume2 := new(dbngfakes.FakeCreatedVolume)
 
-					expectedHandle1Volume = NewVolume(handle1Volume, fakeVolume1)
-					expectedHandle2Volume = NewVolume(handle2Volume, fakeVolume2)
+						expectedHandle1Volume = NewVolume(handle1Volume, fakeVolume1)
+						expectedHandle2Volume = NewVolume(handle2Volume, fakeVolume2)
 
-					fakeVolume1.HandleReturns("handle-1")
-					fakeVolume2.HandleReturns("handle-2")
+						fakeVolume1.HandleReturns("handle-1")
+						fakeVolume2.HandleReturns("handle-2")
 
-					fakeVolume1.PathReturns("/handle-1/path")
-					fakeVolume2.PathReturns("/handle-2/path")
+						fakeVolume1.PathReturns("/handle-1/path")
+						fakeVolume2.PathReturns("/handle-2/path")
 
-					fakeDBVolumeFactory.FindVolumesForContainerReturns([]dbng.CreatedVolume{fakeVolume1, fakeVolume2}, nil)
+						fakeDBVolumeFactory.FindVolumesForContainerReturns([]dbng.CreatedVolume{fakeVolume1, fakeVolume2}, nil)
 
-					fakeBaggageclaimClient.LookupVolumeStub = func(logger lager.Logger, handle string) (baggageclaim.Volume, bool, error) {
-						if handle == "handle-1" {
-							return handle1Volume, true, nil
-						} else if handle == "handle-2" {
-							return handle2Volume, true, nil
-						} else {
-							panic("unknown handle: " + handle)
+						fakeBaggageclaimClient.LookupVolumeStub = func(logger lager.Logger, handle string) (baggageclaim.Volume, bool, error) {
+							if handle == "handle-1" {
+								return handle1Volume, true, nil
+							} else if handle == "handle-2" {
+								return handle2Volume, true, nil
+							} else {
+								panic("unknown handle: " + handle)
+							}
 						}
-					}
-				})
-
-				Describe("VolumeMounts", func() {
-					It("returns all bound volumes based on properties on the container", func() {
-						Expect(foundContainer.VolumeMounts()).To(ConsistOf([]VolumeMount{
-							{Volume: expectedHandle1Volume, MountPath: "/handle-1/path"},
-							{Volume: expectedHandle2Volume, MountPath: "/handle-2/path"},
-						}))
 					})
 
-					Context("when LookupVolume returns an error", func() {
-						disaster := errors.New("nope")
-
-						BeforeEach(func() {
-							fakeBaggageclaimClient.LookupVolumeReturns(nil, false, disaster)
+					Describe("VolumeMounts", func() {
+						It("returns all bound volumes based on properties on the container", func() {
+							Expect(foundContainer.VolumeMounts()).To(ConsistOf([]VolumeMount{
+								{Volume: expectedHandle1Volume, MountPath: "/handle-1/path"},
+								{Volume: expectedHandle2Volume, MountPath: "/handle-2/path"},
+							}))
 						})
 
-						It("returns the error on lookup", func() {
-							Expect(findErr).To(Equal(disaster))
+						Context("when LookupVolume returns an error", func() {
+							disaster := errors.New("nope")
+
+							BeforeEach(func() {
+								fakeBaggageclaimClient.LookupVolumeReturns(nil, false, disaster)
+							})
+
+							It("returns the error on lookup", func() {
+								Expect(findErr).To(Equal(disaster))
+							})
+						})
+					})
+				})
+
+				Context("when the user property is present", func() {
+					var (
+						actualSpec garden.ProcessSpec
+						actualIO   garden.ProcessIO
+					)
+
+					BeforeEach(func() {
+						actualSpec = garden.ProcessSpec{
+							Path: "some-path",
+							Args: []string{"some", "args"},
+							Env:  []string{"some=env"},
+							Dir:  "some-dir",
+						}
+
+						actualIO = garden.ProcessIO{}
+
+						fakeContainer.PropertiesReturns(garden.Properties{"user": "maverick"}, nil)
+					})
+
+					JustBeforeEach(func() {
+						foundContainer.Run(actualSpec, actualIO)
+					})
+
+					Describe("Run", func() {
+						It("calls Run() on the garden container and injects the user", func() {
+							Expect(fakeContainer.RunCallCount()).To(Equal(1))
+							spec, io := fakeContainer.RunArgsForCall(0)
+							Expect(spec).To(Equal(garden.ProcessSpec{
+								Path: "some-path",
+								Args: []string{"some", "args"},
+								Env:  []string{"some=env"},
+								Dir:  "some-dir",
+								User: "maverick",
+							}))
+							Expect(io).To(Equal(garden.ProcessIO{}))
+						})
+					})
+				})
+
+				Context("when the user property is not present", func() {
+					var (
+						actualSpec garden.ProcessSpec
+						actualIO   garden.ProcessIO
+					)
+
+					BeforeEach(func() {
+						actualSpec = garden.ProcessSpec{
+							Path: "some-path",
+							Args: []string{"some", "args"},
+							Env:  []string{"some=env"},
+							Dir:  "some-dir",
+						}
+
+						actualIO = garden.ProcessIO{}
+
+						fakeContainer.PropertiesReturns(garden.Properties{"user": ""}, nil)
+					})
+
+					JustBeforeEach(func() {
+						foundContainer.Run(actualSpec, actualIO)
+					})
+
+					Describe("Run", func() {
+						It("calls Run() on the garden container and injects the default user", func() {
+							Expect(fakeContainer.RunCallCount()).To(Equal(1))
+							spec, io := fakeContainer.RunArgsForCall(0)
+							Expect(spec).To(Equal(garden.ProcessSpec{
+								Path: "some-path",
+								Args: []string{"some", "args"},
+								Env:  []string{"some=env"},
+								Dir:  "some-dir",
+								User: "root",
+							}))
+							Expect(io).To(Equal(garden.ProcessIO{}))
+							Expect(fakeContainer.RunCallCount()).To(Equal(1))
 						})
 					})
 				})
 			})
 
-			Context("when the user property is present", func() {
-				var (
-					actualSpec garden.ProcessSpec
-					actualIO   garden.ProcessIO
-				)
-
+			Context("and the gardenClient returns garden.ContainerNotFoundError", func() {
 				BeforeEach(func() {
-					actualSpec = garden.ProcessSpec{
-						Path: "some-path",
-						Args: []string{"some", "args"},
-						Env:  []string{"some=env"},
-						Dir:  "some-dir",
-					}
-
-					actualIO = garden.ProcessIO{}
-
-					fakeContainer.PropertiesReturns(garden.Properties{"user": "maverick"}, nil)
+					fakeGardenClient.LookupReturns(nil, garden.ContainerNotFoundError{Handle: "some-handle"})
 				})
 
-				JustBeforeEach(func() {
-					foundContainer.Run(actualSpec, actualIO)
-				})
-
-				Describe("Run", func() {
-					It("calls Run() on the garden container and injects the user", func() {
-						Expect(fakeContainer.RunCallCount()).To(Equal(1))
-						spec, io := fakeContainer.RunArgsForCall(0)
-						Expect(spec).To(Equal(garden.ProcessSpec{
-							Path: "some-path",
-							Args: []string{"some", "args"},
-							Env:  []string{"some=env"},
-							Dir:  "some-dir",
-							User: "maverick",
-						}))
-						Expect(io).To(Equal(garden.ProcessIO{}))
-					})
+				It("returns false and no error", func() {
+					Expect(findErr).ToNot(HaveOccurred())
+					Expect(found).To(BeFalse())
 				})
 			})
 
-			Context("when the user property is not present", func() {
-				var (
-					actualSpec garden.ProcessSpec
-					actualIO   garden.ProcessIO
-				)
+			Context("when the gardenClient returns an error", func() {
+				var expectedErr error
 
 				BeforeEach(func() {
-					actualSpec = garden.ProcessSpec{
-						Path: "some-path",
-						Args: []string{"some", "args"},
-						Env:  []string{"some=env"},
-						Dir:  "some-dir",
-					}
-
-					actualIO = garden.ProcessIO{}
-
-					fakeContainer.PropertiesReturns(garden.Properties{"user": ""}, nil)
+					expectedErr = fmt.Errorf("container not found")
+					fakeGardenClient.LookupReturns(nil, expectedErr)
 				})
 
-				JustBeforeEach(func() {
-					foundContainer.Run(actualSpec, actualIO)
-				})
+				It("returns nil and forwards the error", func() {
+					Expect(findErr).To(Equal(expectedErr))
 
-				Describe("Run", func() {
-					It("calls Run() on the garden container and injects the default user", func() {
-						Expect(fakeContainer.RunCallCount()).To(Equal(1))
-						spec, io := fakeContainer.RunArgsForCall(0)
-						Expect(spec).To(Equal(garden.ProcessSpec{
-							Path: "some-path",
-							Args: []string{"some", "args"},
-							Env:  []string{"some=env"},
-							Dir:  "some-dir",
-							User: "root",
-						}))
-						Expect(io).To(Equal(garden.ProcessIO{}))
-						Expect(fakeContainer.RunCallCount()).To(Equal(1))
-					})
+					Expect(foundContainer).To(BeNil())
 				})
 			})
 		})
 
-		Context("when the gardenClient returns garden.ContainerNotFoundError", func() {
+		Context("the dbContainerFactory returns an error", func() {
 			BeforeEach(func() {
-				fakeGardenClient.LookupReturns(nil, garden.ContainerNotFoundError{Handle: "some-handle"})
+				fakeDBContainerFactory.FindContainerReturns(nil, nil, errors.New("failure!"))
 			})
 
-			It("returns false and no error", func() {
-				Expect(findErr).ToNot(HaveOccurred())
+			It("passes along the error", func() {
+				Expect(findErr).To(HaveOccurred())
+				Expect(findErr.Error()).To(Equal("failure!"))
 				Expect(found).To(BeFalse())
-			})
-		})
-
-		Context("when the gardenClient returns an error", func() {
-			var expectedErr error
-
-			BeforeEach(func() {
-				expectedErr = fmt.Errorf("container not found")
-				fakeGardenClient.LookupReturns(nil, expectedErr)
-			})
-
-			It("returns nil and forwards the error", func() {
-				Expect(findErr).To(Equal(expectedErr))
-
-				Expect(foundContainer).To(BeNil())
 			})
 		})
 

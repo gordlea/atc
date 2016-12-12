@@ -117,13 +117,13 @@ var _ = Describe("ContainerFactory", func() {
 
 		Context("when the container is created", func() {
 			var (
-				createdContainer *dbng.CreatedContainer
+				// createdContainer *dbng.CreatedContainer
 
 				ok bool
 			)
 
 			BeforeEach(func() {
-				createdContainer, err = containerFactory.ContainerCreated(creatingContainer)
+				_, err = containerFactory.ContainerCreated(creatingContainer)
 			})
 
 			Context("when the build is not finished", func() {
@@ -412,7 +412,7 @@ var _ = Describe("ContainerFactory", func() {
 		})
 	})
 
-	FDescribe("FindResourceGetContainer", func() {
+	Describe("FindResourceGetContainer", func() {
 		var (
 			creatingContainer *dbng.CreatingContainer
 			createdContainer  *dbng.CreatedContainer
@@ -463,7 +463,6 @@ var _ = Describe("ContainerFactory", func() {
 	Describe("FindBuildContainer", func() {
 		var (
 			creatingContainer *dbng.CreatingContainer
-			createdContainer  *dbng.CreatedContainer
 		)
 
 		Context("when a creating container exists", func() {
@@ -483,7 +482,7 @@ var _ = Describe("ContainerFactory", func() {
 
 			Context("when there is a created container", func() {
 				BeforeEach(func() {
-					createdContainer, err = containerFactory.ContainerCreated(creatingContainer)
+					_, err = containerFactory.ContainerCreated(creatingContainer)
 					Expect(err).NotTo(HaveOccurred())
 				})
 

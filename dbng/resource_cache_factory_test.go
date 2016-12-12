@@ -148,6 +148,12 @@ var _ = Describe("ResourceCacheFactory", func() {
 
 			Expect(resourceCaches).To(ConsistOf(
 				resourceCache{
+					Version:          "{}",
+					ParamsHash:       "{}",
+					SourceHash:       "{}",
+					BaseResourceName: "some-base-resource-type",
+				},
+				resourceCache{
 					Version:          `{"some-type-type":"version"}`,
 					ParamsHash:       "null",
 					BaseResourceName: "some-base-type",
