@@ -135,7 +135,7 @@ func (p *containerProvider) FindOrCreateContainer(
 	resourceTypes atc.ResourceTypes,
 	outputPaths map[string]string,
 ) (Container, error) {
-	container, found, err := p.findGardenContainer(logger, createdContainer, creatingContainer)
+	container, found, err := p.findGardenContainer(logger, creatingContainer, createdContainer)
 
 	if err != nil {
 		return container, err
@@ -143,6 +143,10 @@ func (p *containerProvider) FindOrCreateContainer(
 
 	if found {
 		return container, nil
+	}
+
+	if creatingContainer == nil {
+		panic("WHOA!")
 	}
 
 	return p.createContainer(
@@ -168,13 +172,13 @@ func (p *containerProvider) FindContainerByHandle(
 		return nil, false, err
 	}
 
-	return p.findGardenContainer(logger, createdContainer, creatingContainer)
+	return p.findGardenContainer(logger, creatingContainer, createdContainer)
 }
 
 func (p *containerProvider) findGardenContainer(
 	logger lager.Logger,
-	createdContainer *dbng.CreatedContainer,
 	creatingContainer *dbng.CreatingContainer,
+	createdContainer *dbng.CreatedContainer,
 ) (Container, bool, error) {
 	var handle string
 
@@ -468,7 +472,7 @@ func (p *containerProvider) getImageForContainer(
 			imageVolume, err = p.volumeClient.FindOrCreateVolumeForContainer(
 				logger,
 				VolumeSpec{
-					Strategy: ContainerRootFSStrategy{
+					Strategy: ContainerRootFSStrategy{ // COW volume
 						Parent: artifactVolume,
 					},
 					Privileged: imageSpec.Privileged,

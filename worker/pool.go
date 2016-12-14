@@ -155,6 +155,9 @@ func (pool *pool) FindOrCreateContainerForIdentifier(
 	imageFetchingDelegate ImageFetchingDelegate,
 	resourceSources map[string]ArtifactSource,
 ) (Container, []string, error) {
+
+	logger.Debug("finding-container-for-identifier", lager.Data{"id": fmt.Sprintf("%#v", id)})
+
 	worker, mounts, missingSourceNames, err := pool.findCompatibleWorker(
 		containerSpec,
 		resourceTypes,

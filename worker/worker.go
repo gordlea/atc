@@ -366,6 +366,10 @@ func (worker *gardenWorker) FindOrCreateResourceGetContainer(
 	}
 
 	creatingContainer, createdContainer, err := worker.dbContainerFactory.FindResourceGetContainer(worker.name, resourceCache.ID, metadata.StepName)
+	if err != nil {
+		logger.Error("failed-to-find-resource-get-container", err, lager.Data{"worker": worker.name, "resource-cache-id": resourceCache.ID})
+		return nil, err
+	}
 
 	if creatingContainer == nil && createdContainer == nil {
 		creatingContainer, err = worker.dbContainerFactory.CreateResourceGetContainer(
@@ -409,26 +413,62 @@ func (worker *gardenWorker) FindOrCreateResourceCheckContainer(
 	resourceType string,
 	source atc.Source,
 ) (Container, error) {
-	resourceConfig, err := worker.dbResourceConfigFactory.FindOrCreateResourceConfigForResource(
-		logger,
-		&dbng.Resource{
-			ID: id.ResourceID,
-		},
-		resourceType,
-		source,
-		&dbng.Pipeline{ID: metadata.PipelineID},
-		resourceTypes,
-	)
-	if err != nil {
-		logger.Error("failed-to-get-resource-config", err)
-		return nil, err
+
+	var resourceConfig *dbng.UsedResourceConfig
+	var err error
+
+	if id.BuildID != 0 {
+		resourceConfig, err = worker.dbResourceConfigFactory.FindOrCreateResourceConfigForBuild(
+			logger,
+			&dbng.Build{ID: id.BuildID},
+			resourceType,
+			source,
+			&dbng.Pipeline{ID: metadata.PipelineID},
+			resourceTypes,
+		)
+		if err != nil {
+			logger.Error("failed-to-get-resource-config-for-build", err)
+			return nil, err
+		}
+	} else if id.ResourceID != 0 {
+		resourceConfig, err = worker.dbResourceConfigFactory.FindOrCreateResourceConfigForResource(
+			logger,
+			&dbng.Resource{
+				ID: id.ResourceID,
+			},
+			resourceType,
+			source,
+			&dbng.Pipeline{ID: metadata.PipelineID},
+			resourceTypes,
+		)
+		if err != nil {
+			logger.Error("failed-to-get-resource-config-for-resource", err)
+			return nil, err
+		}
+	} else {
+		resourceConfig, err = worker.dbResourceConfigFactory.FindOrCreateResourceConfigForResourceType(
+			logger,
+			resourceType,
+			source,
+			&dbng.Pipeline{ID: metadata.PipelineID},
+			resourceTypes,
+		)
+		if err != nil {
+			logger.Error("failed-to-get-resource-config-for-resource-type", err)
+			return nil, err
+		}
 	}
 
 	creatingContainer, createdContainer, err := worker.dbContainerFactory.FindResourceCheckContainer(
 		worker.name,
 		resourceConfig.ID,
 		metadata.StepName,
-	)
+	) // translates "purpose" of the container we want into a handle ??
+
+	if err != nil {
+		logger.Error("failed-to-find-resource-check-container", err)
+		return nil, err
+	}
 
 	if creatingContainer == nil && createdContainer == nil {
 		creatingContainer, err = worker.dbContainerFactory.CreateResourceCheckContainer(
@@ -439,6 +479,7 @@ func (worker *gardenWorker) FindOrCreateResourceCheckContainer(
 			resourceConfig,
 			metadata.StepName,
 		)
+
 		if err != nil {
 			logger.Error("failed-to-create-check-container", err)
 			return nil, err
@@ -446,6 +487,7 @@ func (worker *gardenWorker) FindOrCreateResourceCheckContainer(
 	}
 
 	containerProvider := worker.containerProviderFactory.ContainerProviderFor(worker)
+
 	return containerProvider.FindOrCreateContainer(logger, cancel, creatingContainer, createdContainer, delegate, id, metadata, spec, resourceTypes, map[string]string{})
 }
 
@@ -460,15 +502,53 @@ func (worker *gardenWorker) FindOrCreateResourceTypeCheckContainer(
 	resourceTypeName string,
 	source atc.Source,
 ) (Container, error) {
-	resourceConfig, err := worker.dbResourceConfigFactory.FindOrCreateResourceConfigForResourceType(
-		logger,
-		resourceTypeName,
-		source,
-		&dbng.Pipeline{ID: metadata.PipelineID},
-		resourceTypes,
-	)
-	if err != nil {
-		return nil, err
+
+	var resourceConfig *dbng.UsedResourceConfig
+	var err error
+
+	if id.BuildID != 0 {
+
+		resourceConfig, err = worker.dbResourceConfigFactory.FindOrCreateResourceConfigForBuild(
+			logger,
+			&dbng.Build{ID: id.BuildID},
+			resourceTypeName,
+			source,
+			&dbng.Pipeline{ID: metadata.PipelineID},
+			resourceTypes,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+	} else if id.ResourceID != 0 {
+
+		resourceConfig, err = worker.dbResourceConfigFactory.FindOrCreateResourceConfigForResource(
+			logger,
+			&dbng.Resource{
+				ID: id.ResourceID,
+			},
+			resourceTypeName,
+			source,
+			&dbng.Pipeline{ID: metadata.PipelineID},
+			resourceTypes,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+
+		resourceConfig, err = worker.dbResourceConfigFactory.FindOrCreateResourceConfigForResourceType(
+			logger,
+			resourceTypeName,
+			source,
+			&dbng.Pipeline{ID: metadata.PipelineID},
+			resourceTypes,
+		)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	creatingContainer, createdContainer, err := worker.dbContainerFactory.FindResourceCheckContainer(worker.name, resourceConfig.ID, metadata.StepName)

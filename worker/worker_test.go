@@ -401,6 +401,174 @@ var _ = Describe("Worker", func() {
 
 	})
 
+	Describe("FindOrCreateResourceGetContainer", func() {
+		var container Container
+		var createErr error
+		var imageSpec ImageSpec
+		var identifier Identifier
+		var resourceCache = &dbng.UsedResourceCache{ID: 5432}
+
+		JustBeforeEach(func() {
+			container, createErr = gardenWorker.FindOrCreateResourceGetContainer(
+				logger,
+				nil,
+				nil,
+				identifier,
+				Metadata{StepName: "some-step-name"},
+				ContainerSpec{
+					ImageSpec: imageSpec,
+				},
+				atc.ResourceTypes{},
+				map[string]string{},
+				"resource-type-name",
+				atc.Version{},
+				atc.Source{},
+				atc.Params{},
+			)
+		})
+
+		Context("when creating for a build", func() {
+			BeforeEach(func() {
+				identifier = Identifier{BuildID: 123}
+			})
+
+			Context("creating the resource cache succeeds", func() {
+				BeforeEach(func() {
+					fakeDBResourceCacheFactory.FindOrCreateResourceCacheForBuildReturns(resourceCache, nil)
+				})
+
+				It("finds or creates a resource cache for build ", func() {
+					Expect(fakeDBResourceCacheFactory.FindOrCreateResourceCacheForBuildCallCount()).To(Equal(1))
+				})
+			})
+
+			Context("creating the resource cache fails", func() {
+				BeforeEach(func() {
+					fakeDBResourceCacheFactory.FindOrCreateResourceCacheForBuildReturns(nil, errors.New("it failed"))
+				})
+
+				It("returns the error", func() {
+					Expect(createErr).To(HaveOccurred())
+					Expect(createErr.Error()).To(Equal("it failed"))
+				})
+			})
+		})
+
+		Context("when creating for a resource", func() {
+			BeforeEach(func() {
+				identifier = Identifier{ResourceID: 123}
+			})
+
+			Context("creating the resource cache succeeds", func() {
+				BeforeEach(func() {
+					fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceReturns(resourceCache, nil)
+				})
+
+				It("finds or creates a resource cache for resource ", func() {
+					Expect(fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceCallCount()).To(Equal(1))
+				})
+			})
+
+			Context("creating the resource cache fails", func() {
+				BeforeEach(func() {
+					fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceReturns(nil, errors.New("it failed"))
+				})
+
+				It("returns the error", func() {
+					Expect(createErr).To(HaveOccurred())
+					Expect(createErr.Error()).To(Equal("it failed"))
+				})
+			})
+		})
+
+		Context("when creating for a resource type", func() {
+			BeforeEach(func() {
+				identifier = Identifier{ResourceTypeID: 123}
+			})
+
+			Context("creating the resource cache succeeds", func() {
+				BeforeEach(func() {
+					fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceTypeReturns(resourceCache, nil)
+				})
+
+				It("finds or creates a resource cache for resource type", func() {
+					Expect(fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceTypeCallCount()).To(Equal(1))
+				})
+			})
+
+			Context("creating the resource cache fails", func() {
+				BeforeEach(func() {
+					fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceTypeReturns(nil, errors.New("it failed"))
+				})
+
+				It("returns the error", func() {
+					Expect(createErr).To(HaveOccurred())
+					Expect(createErr.Error()).To(Equal("it failed"))
+				})
+			})
+		})
+
+		Context("when finding resource get container", func() {
+			BeforeEach(func() {
+				identifier = Identifier{ResourceTypeID: 123}
+				fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceTypeReturns(resourceCache, nil)
+			})
+
+			Context("found a creating container", func() {
+				BeforeEach(func() {
+					fakeCreatingContainer := &dbng.CreatingContainer{ID: 42}
+					fakeDBContainerFactory.FindResourceGetContainerReturns(fakeCreatingContainer, nil, nil)
+				})
+
+				It("doesn't try to create a container", func() {
+					Expect(fakeDBContainerFactory.CreateResourceGetContainerCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("found a created container", func() {
+				BeforeEach(func() {
+					fakeCreatedContainer := &dbng.CreatedContainer{ID: 52}
+					fakeDBContainerFactory.FindResourceGetContainerReturns(nil, fakeCreatedContainer, nil)
+				})
+
+				It("doesn't try to create a container", func() {
+					Expect(fakeDBContainerFactory.CreateResourceGetContainerCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("something fails when finding the resource get container", func() {
+				BeforeEach(func() {
+					fakeDBContainerFactory.FindResourceGetContainerReturns(nil, nil, errors.New("OH NO! :c"))
+				})
+
+				It("returns the error", func() {
+					Expect(createErr).To(HaveOccurred())
+					Expect(createErr.Error()).To(Equal("OH NO! :c"))
+				})
+
+			})
+
+		})
+
+		Context("when no resource get container exists", func() {
+			BeforeEach(func() {
+				identifier = Identifier{ResourceTypeID: 123}
+				fakeDBResourceCacheFactory.FindOrCreateResourceCacheForResourceTypeReturns(resourceCache, nil)
+				fakeDBContainerFactory.FindResourceGetContainerReturns(nil, nil, nil)
+			})
+
+			It("creates the resource get container", func() {
+				Expect(fakeDBContainerFactory.CreateResourceGetContainerCallCount()).To(Equal(1))
+				passedWorker, passedResourceCache, stepName := fakeDBContainerFactory.CreateResourceGetContainerArgsForCall(0)
+				Expect(passedResourceCache.ID).To(Equal(resourceCache.ID))
+				Expect(passedWorker.Name).To(Equal(gardenWorker.Name()))
+				Expect(stepName).To(Equal("some-step-name"))
+			})
+
+		})
+
+	})
+
 	Describe("FindContainerForIdentifier", func() {
 		var (
 			id Identifier

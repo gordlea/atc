@@ -1,6 +1,9 @@
 package dbng
 
 import (
+	"fmt"
+
+	"code.cloudfoundry.org/lager"
 	sq "github.com/Masterminds/squirrel"
 
 	"database/sql"
@@ -450,6 +453,8 @@ func (factory *ContainerFactory) createPlanContainer(
 }
 
 func (factory *ContainerFactory) FindResourceCheckContainer(workerName string, resourceConfigID int, stepName string) (*CreatingContainer, *CreatedContainer, error) {
+	fmt.Printf("finding-resource-check-container: %#v", lager.Data{"worker_name": workerName, "step_name": stepName, "resource_confid_id": resourceConfigID})
+
 	return factory.findContainer(sq.Eq{
 		"worker_name":        workerName,
 		"step_name":          stepName,
