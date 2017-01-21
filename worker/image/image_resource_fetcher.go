@@ -119,7 +119,7 @@ func (i *imageResourceFetcher) Fetch(
 			version,
 			imageResourceSource,
 			nil,
-			&dbng.Resource{ID: id.ResourceID},
+			id.ResourceID,
 			metadata.PipelineID,
 			customTypes,
 			i.dbResourceCacheFactory,

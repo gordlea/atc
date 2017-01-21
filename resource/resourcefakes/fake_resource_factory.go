@@ -27,6 +27,19 @@ type FakeResourceFactory struct {
 		result2 []string
 		result3 error
 	}
+	NewCheckResourceStub        func(logger lager.Logger, id worker.Identifier, metadata worker.Metadata, resourceSpec worker.ContainerSpec, resourceTypes atc.ResourceTypes) (resource.Resource, error)
+	newCheckResourceMutex       sync.RWMutex
+	newCheckResourceArgsForCall []struct {
+		logger        lager.Logger
+		id            worker.Identifier
+		metadata      worker.Metadata
+		resourceSpec  worker.ContainerSpec
+		resourceTypes atc.ResourceTypes
+	}
+	newCheckResourceReturns struct {
+		result1 resource.Resource
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -72,11 +85,51 @@ func (fake *FakeResourceFactory) NewResourceReturns(result1 resource.Resource, r
 	}{result1, result2, result3}
 }
 
+func (fake *FakeResourceFactory) NewCheckResource(logger lager.Logger, id worker.Identifier, metadata worker.Metadata, resourceSpec worker.ContainerSpec, resourceTypes atc.ResourceTypes) (resource.Resource, error) {
+	fake.newCheckResourceMutex.Lock()
+	fake.newCheckResourceArgsForCall = append(fake.newCheckResourceArgsForCall, struct {
+		logger        lager.Logger
+		id            worker.Identifier
+		metadata      worker.Metadata
+		resourceSpec  worker.ContainerSpec
+		resourceTypes atc.ResourceTypes
+	}{logger, id, metadata, resourceSpec, resourceTypes})
+	fake.recordInvocation("NewCheckResource", []interface{}{logger, id, metadata, resourceSpec, resourceTypes})
+	fake.newCheckResourceMutex.Unlock()
+	if fake.NewCheckResourceStub != nil {
+		return fake.NewCheckResourceStub(logger, id, metadata, resourceSpec, resourceTypes)
+	} else {
+		return fake.newCheckResourceReturns.result1, fake.newCheckResourceReturns.result2
+	}
+}
+
+func (fake *FakeResourceFactory) NewCheckResourceCallCount() int {
+	fake.newCheckResourceMutex.RLock()
+	defer fake.newCheckResourceMutex.RUnlock()
+	return len(fake.newCheckResourceArgsForCall)
+}
+
+func (fake *FakeResourceFactory) NewCheckResourceArgsForCall(i int) (lager.Logger, worker.Identifier, worker.Metadata, worker.ContainerSpec, atc.ResourceTypes) {
+	fake.newCheckResourceMutex.RLock()
+	defer fake.newCheckResourceMutex.RUnlock()
+	return fake.newCheckResourceArgsForCall[i].logger, fake.newCheckResourceArgsForCall[i].id, fake.newCheckResourceArgsForCall[i].metadata, fake.newCheckResourceArgsForCall[i].resourceSpec, fake.newCheckResourceArgsForCall[i].resourceTypes
+}
+
+func (fake *FakeResourceFactory) NewCheckResourceReturns(result1 resource.Resource, result2 error) {
+	fake.NewCheckResourceStub = nil
+	fake.newCheckResourceReturns = struct {
+		result1 resource.Resource
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeResourceFactory) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.newResourceMutex.RLock()
 	defer fake.newResourceMutex.RUnlock()
+	fake.newCheckResourceMutex.RLock()
+	defer fake.newCheckResourceMutex.RUnlock()
 	return fake.invocations
 }
 

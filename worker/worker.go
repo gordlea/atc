@@ -507,23 +507,6 @@ func (worker *gardenWorker) findOrCreateContainerForIdentifier(
 	}
 
 	logger.Debug("creating-container-for-identifier", lager.Data{"id": id})
-	// if id.ImageResourceType != "" {
-	// 	container, err = worker.FindOrCreateResourceGetContainer(
-	// 		logger,
-	// 		nil,
-	// 		imageFetchingDelegate,
-	// 		id,
-	// 		metadata,
-	// 		resourceSpec,
-	// 		resourceTypes,
-	// 		map[string]string{},
-	// 		string(id.ImageResourceType),
-	// 		s.resourceOptions.Version(),
-	// 		id.ImageResourceSource,
-	// 		s.resourceOptions.Params(),
-	// 	)
-	// }
-
 	if id.BuildID != 0 {
 		container, err = worker.FindOrCreateBuildContainer(
 			logger,
