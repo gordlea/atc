@@ -55,9 +55,7 @@ func (db *teamDB) GetPipelineByName(pipelineName string) (SavedPipeline, bool, e
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
 		WHERE p.name = $1
-		AND p.team_id = (
-			SELECT id FROM teams WHERE t.id = $2
-		)
+		AND p.team_id = $2
 	`, pipelineName, db.teamId)
 	pipeline, err := scanPipeline(row)
 	if err != nil {
@@ -76,9 +74,7 @@ func (db *teamDB) GetPipelines() ([]SavedPipeline, error) {
 		SELECT `+pipelineColumns+`
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
-		WHERE team_id = (
-			SELECT id FROM teams WHERE t.id = $1
-		)
+		WHERE team_id = $1
 		ORDER BY ordering
 	`, db.teamId)
 	if err != nil {
@@ -95,9 +91,7 @@ func (db *teamDB) GetPublicPipelines() ([]SavedPipeline, error) {
 		SELECT `+pipelineColumns+`
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
-		WHERE team_id = (
-			SELECT id FROM teams WHERE t.id = $1
-		)
+		WHERE team_id = $1
 		AND public = true
 		ORDER BY ordering
 	`, db.teamId)
@@ -115,7 +109,7 @@ func (db *teamDB) GetPrivateAndAllPublicPipelines() ([]SavedPipeline, error) {
 		SELECT `+pipelineColumns+`
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
-		WHERE team_id = (SELECT id FROM teams WHERE t.id = $1)
+		WHERE team_id = $1
 		ORDER BY ordering
 	`, db.teamId)
 	if err != nil {
@@ -133,7 +127,7 @@ func (db *teamDB) GetPrivateAndAllPublicPipelines() ([]SavedPipeline, error) {
 		SELECT `+pipelineColumns+`
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
-		WHERE team_id != (SELECT id FROM teams WHERE t.id = $1)
+		WHERE team_id != $1
 		AND public = true
 		ORDER BY team_name, ordering
 	`, db.teamId)
