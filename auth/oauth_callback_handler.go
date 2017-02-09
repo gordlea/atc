@@ -88,7 +88,12 @@ func (handler *OAuthCallbackHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	}
 
 	teamName := oauthState.TeamName
-	teamDB := handler.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := handler.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		hLog.Error("failed-to-get-team", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	team, found, err := teamDB.GetTeam()
 	if err != nil {
 		hLog.Error("failed-to-get-team", err)

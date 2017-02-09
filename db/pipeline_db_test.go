@@ -213,7 +213,8 @@ var _ = Describe("PipelineDB", func() {
 		savedTeam, err = sqlDB.CreateTeam(db.Team{Name: "some-team"})
 		Expect(err).NotTo(HaveOccurred())
 
-		teamDB = teamDBFactory.GetTeamDB("some-team")
+		teamDB, err = teamDBFactory.GetTeamDBByName("some-team")
+		Expect(err).NotTo(HaveOccurred())
 
 		savedPipeline, _, err = teamDB.SaveConfigToBeDeprecated("a-pipeline-name", pipelineConfig, 0, db.PipelineUnpaused)
 		Expect(err).NotTo(HaveOccurred())
@@ -417,7 +418,8 @@ var _ = Describe("PipelineDB", func() {
 		var teamDB db.TeamDB
 
 		BeforeEach(func() {
-			teamDB = teamDBFactory.GetTeamDB("some-team")
+			teamDB, err = teamDBFactory.GetTeamDBByName("some-team")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("can update the name of a given pipeline", func() {
@@ -440,7 +442,8 @@ var _ = Describe("PipelineDB", func() {
 				team2, err = sqlDB.CreateTeam(db.Team{Name: "some-other-team"})
 				Expect(err).NotTo(HaveOccurred())
 
-				team2DB = teamDBFactory.GetTeamDB(team2.Name)
+				team2DB, err = teamDBFactory.GetTeamDBByName(team2.Name)
+				Expect(err).NotTo(HaveOccurred())
 				_, _, err = team2DB.SaveConfigToBeDeprecated("a-pipeline-name", pipelineConfig, 0, db.PipelineUnpaused)
 				Expect(err).NotTo(HaveOccurred())
 			})

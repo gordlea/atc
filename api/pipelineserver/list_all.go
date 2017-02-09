@@ -17,7 +17,13 @@ func (s *Server) ListAllPipelines(w http.ResponseWriter, r *http.Request) {
 	var pipelines []db.SavedPipeline
 	var err error
 	if authTeamFound {
-		pipelines, err = s.teamDBFactory.GetTeamDB(authTeam.Name()).GetPrivateAndAllPublicPipelines()
+		teamDB, err := s.teamDBFactory.GetTeamDBByName(authTeam.Name())
+		if err != nil {
+			logger.Error("failed-to-get-all-team", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		pipelines, err = teamDB.GetPrivateAndAllPublicPipelines()
 	} else {
 		pipelines, err = s.pipelinesDB.GetAllPublicPipelines()
 	}

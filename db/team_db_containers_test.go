@@ -58,7 +58,8 @@ var _ = Describe("TeamDbContainers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		otherTeamID = savedOtherTeam.ID
 
-		teamDB = teamDBFactory.GetTeamDB("team-name")
+		teamDB, err = teamDBFactory.GetTeamDBByName("team-name")
+		Expect(err).NotTo(HaveOccurred())
 
 		build, err = teamDB.CreateOneOffBuild()
 		Expect(err).NotTo(HaveOccurred())

@@ -52,15 +52,18 @@ var _ = Describe("TeamDB", func() {
 		savedTeam, err = database.CreateTeam(team)
 		Expect(err).NotTo(HaveOccurred())
 
-		teamDB = teamDBFactory.GetTeamDB("team-NAME")
-		nonExistentTeamDB = teamDBFactory.GetTeamDB("non-existent-name")
+		teamDB, err = teamDBFactory.GetTeamDBByName("team-NAME")
+		Expect(err).NotTo(HaveOccurred())
+		nonExistentTeamDB, err = teamDBFactory.GetTeamDBByName("non-existent-name")
+		Expect(err).NotTo(HaveOccurred())
 
 		pipelineDBFactory = db.NewPipelineDBFactory(dbConn, bus, lockFactory)
 
 		team = db.Team{Name: "other-team-name"}
 		otherSavedTeam, err = database.CreateTeam(team)
 		Expect(err).NotTo(HaveOccurred())
-		otherTeamDB = teamDBFactory.GetTeamDB("other-team-name")
+		otherTeamDB, err = teamDBFactory.GetTeamDBByName("other-team-name")
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -562,7 +565,8 @@ var _ = Describe("TeamDB", func() {
 		})
 
 		It("returns shared workers if current team has no workers", func() {
-			noWorkersTeamDB := teamDBFactory.GetTeamDB("no-workers-team-name")
+			noWorkersTeamDB, err := teamDBFactory.GetTeamDBByName("no-workers-team-name")
+			Expect(err).NotTo(HaveOccurred())
 			workers, err := noWorkersTeamDB.Workers()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(workers).To(HaveLen(1))
@@ -688,8 +692,10 @@ var _ = Describe("TeamDB", func() {
 					_, err = database.CreateTeam(db.Team{Name: "team-b"})
 					Expect(err).NotTo(HaveOccurred())
 
-					caseInsensitiveTeamADB = teamDBFactory.GetTeamDB("team-A")
-					caseInsensitiveTeamBDB = teamDBFactory.GetTeamDB("team-B")
+					caseInsensitiveTeamADB, err = teamDBFactory.GetTeamDBByName("team-A")
+					Expect(err).NotTo(HaveOccurred())
+					caseInsensitiveTeamBDB, err = teamDBFactory.GetTeamDBByName("team-B")
+					Expect(err).NotTo(HaveOccurred())
 
 					for i := 0; i < 3; i++ {
 						teamABuilds[i], err = caseInsensitiveTeamADB.CreateOneOffBuild()

@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	sq "github.com/Masterminds/squirrel"
 
@@ -22,6 +21,7 @@ type TeamDB interface {
 
 	OrderPipelines([]string) error
 
+	GetTeamIdByName(teamName string) (int, bool, error)
 	GetTeam() (SavedTeam, bool, error)
 	UpdateName(teamName string) (SavedTeam, error)
 	UpdateBasicAuth(basicAuth *BasicAuth) (SavedTeam, error)
@@ -43,7 +43,7 @@ type TeamDB interface {
 }
 
 type teamDB struct {
-	teamName string
+	teamId int
 
 	conn         Conn
 	buildFactory *buildFactory
@@ -56,9 +56,9 @@ func (db *teamDB) GetPipelineByName(pipelineName string) (SavedPipeline, bool, e
 		INNER JOIN teams t ON t.id = p.team_id
 		WHERE p.name = $1
 		AND p.team_id = (
-			SELECT id FROM teams WHERE LOWER(name) = LOWER($2)
+			SELECT id FROM teams WHERE t.id = $2
 		)
-	`, pipelineName, db.teamName)
+	`, pipelineName, db.teamId)
 	pipeline, err := scanPipeline(row)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -77,10 +77,10 @@ func (db *teamDB) GetPipelines() ([]SavedPipeline, error) {
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
 		WHERE team_id = (
-			SELECT id FROM teams WHERE LOWER(name) = LOWER($1)
+			SELECT id FROM teams WHERE t.id = $1
 		)
 		ORDER BY ordering
-	`, db.teamName)
+	`, db.teamId)
 	if err != nil {
 		return nil, err
 	}
@@ -96,11 +96,11 @@ func (db *teamDB) GetPublicPipelines() ([]SavedPipeline, error) {
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
 		WHERE team_id = (
-			SELECT id FROM teams WHERE LOWER(name) = LOWER($1)
+			SELECT id FROM teams WHERE t.id = $1
 		)
 		AND public = true
 		ORDER BY ordering
-	`, db.teamName)
+	`, db.teamId)
 	if err != nil {
 		return nil, err
 	}
@@ -115,9 +115,9 @@ func (db *teamDB) GetPrivateAndAllPublicPipelines() ([]SavedPipeline, error) {
 		SELECT `+pipelineColumns+`
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
-		WHERE team_id = (SELECT id FROM teams WHERE LOWER(name) = LOWER($1))
+		WHERE team_id = (SELECT id FROM teams WHERE t.id = $1)
 		ORDER BY ordering
-	`, db.teamName)
+	`, db.teamId)
 	if err != nil {
 		return nil, err
 	}
@@ -133,10 +133,10 @@ func (db *teamDB) GetPrivateAndAllPublicPipelines() ([]SavedPipeline, error) {
 		SELECT `+pipelineColumns+`
 		FROM pipelines p
 		INNER JOIN teams t ON t.id = p.team_id
-		WHERE team_id != (SELECT id FROM teams WHERE LOWER(name) = LOWER($1))
+		WHERE team_id != (SELECT id FROM teams WHERE t.id = $1)
 		AND public = true
 		ORDER BY team_name, ordering
-	`, db.teamName)
+	`, db.teamId)
 	if err != nil {
 		return nil, err
 	}
@@ -161,17 +161,11 @@ func (db *teamDB) OrderPipelines(pipelineNames []string) error {
 
 	var pipelineCount int
 
-	var teamID int
-	err = tx.QueryRow(`SELECT id FROM teams WHERE LOWER(name) = LOWER($1)`, db.teamName).Scan(&teamID)
-	if err != nil {
-		return err
-	}
-
 	err = tx.QueryRow(`
 		SELECT COUNT(1)
 		FROM pipelines
 		WHERE team_id = $1
-	`, teamID).Scan(&pipelineCount)
+	`, db.teamId).Scan(&pipelineCount)
 
 	if err != nil {
 		return err
@@ -181,7 +175,7 @@ func (db *teamDB) OrderPipelines(pipelineNames []string) error {
 		UPDATE pipelines
 		SET ordering = $1
 		WHERE team_id = $2
-	`, pipelineCount+1, teamID)
+	`, pipelineCount+1, db.teamId)
 
 	if err != nil {
 		return err
@@ -193,7 +187,7 @@ func (db *teamDB) OrderPipelines(pipelineNames []string) error {
 			SET ordering = $1
 			WHERE name = $2
 			AND team_id = $3
-		`, i, name, teamID)
+		`, i, name, db.teamId)
 
 		if err != nil {
 			return err
@@ -212,9 +206,9 @@ func (db *teamDB) GetConfig(pipelineName string) (atc.Config, atc.RawConfig, Con
 		WHERE name = $1 AND team_id = (
 			SELECT id
 			FROM teams
-			WHERE LOWER(name) = LOWER($2)
+			WHERE t.id = $2
 		)
-	`, pipelineName, db.teamName).Scan(&configBlob, &version)
+	`, pipelineName, db.teamId).Scan(&configBlob, &version)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return atc.Config{}, atc.RawConfig(""), 0, nil
@@ -250,12 +244,6 @@ func (db *teamDB) SaveConfigToBeDeprecated(
 
 	defer tx.Rollback()
 
-	var teamID int
-	err = tx.QueryRow(`SELECT id FROM teams WHERE LOWER(name) = LOWER($1)`, db.teamName).Scan(&teamID)
-	if err != nil {
-		return SavedPipeline{}, false, err
-	}
-
 	var created bool
 	var savedPipeline SavedPipeline
 
@@ -265,7 +253,7 @@ func (db *teamDB) SaveConfigToBeDeprecated(
 		FROM pipelines
 		WHERE name = $1
 	  AND team_id = $2
-	`, pipelineName, teamID).Scan(&existingConfig)
+	`, pipelineName, db.teamId).Scan(&existingConfig)
 	if err != nil {
 		return SavedPipeline{}, false, err
 	}
@@ -289,7 +277,7 @@ func (db *teamDB) SaveConfigToBeDeprecated(
 		(
 			SELECT t.name as team_name FROM teams t WHERE t.id = $4
 		)
-		`, pipelineName, payload, pausedState.Bool(), teamID))
+		`, pipelineName, payload, pausedState.Bool(), db.teamId))
 		if err != nil {
 			return SavedPipeline{}, false, err
 		}
@@ -329,7 +317,7 @@ func (db *teamDB) SaveConfigToBeDeprecated(
 			(
 				SELECT t.name as team_name FROM teams t WHERE t.id = $4
 			)
-			`, payload, pipelineName, from, teamID))
+			`, payload, pipelineName, from, db.teamId))
 		} else {
 			savedPipeline, err = scanPipeline(tx.QueryRow(`
 			UPDATE pipelines
@@ -341,7 +329,7 @@ func (db *teamDB) SaveConfigToBeDeprecated(
 			(
 				SELECT t.name as team_name FROM teams t WHERE t.id = $4
 			)
-			`, payload, pausedState.Bool(), pipelineName, from, teamID))
+			`, payload, pausedState.Bool(), pipelineName, from, db.teamId))
 		}
 
 		if err != nil && err != sql.ErrNoRows {
@@ -520,13 +508,31 @@ func (db *teamDB) saveResourceType(tx Tx, resourceType atc.ResourceType, pipelin
 	return swallowUniqueViolation(err)
 }
 
+func (db *teamDB) GetTeamIdByName(teamName string) (int, bool, error) {
+	var id int
+	row := db.conn.QueryRow(`
+	SELECT id FROM teams WHERE LOWER(name) = LOWER($1)
+`, teamName)
+
+	err := row.Scan(&id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return -1, false, nil
+		}
+
+		return -1, false, err
+	}
+
+	return id, true, nil
+}
+
 func (db *teamDB) GetTeam() (SavedTeam, bool, error) {
 	query := `
 		SELECT id, name, admin, basic_auth, github_auth, uaa_auth, genericoauth_auth
 		FROM teams
-		WHERE LOWER(name) = LOWER($1)
+		WHERE id = $1
 	`
-	params := []interface{}{db.teamName}
+	params := []interface{}{db.teamId}
 	savedTeam, err := db.queryTeam(query, params)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -602,11 +608,11 @@ func (db *teamDB) UpdateName(teamName string) (SavedTeam, error) {
 	query := `
 		UPDATE teams
 		SET name = $1
-		WHERE LOWER(name) = LOWER($2)
+		WHERE id = $2
 		RETURNING id, name, admin, basic_auth, github_auth, uaa_auth, genericoauth_auth
 	`
 
-	params := []interface{}{teamName, db.teamName}
+	params := []interface{}{teamName, db.teamId}
 
 	return db.queryTeam(query, params)
 }
@@ -620,11 +626,11 @@ func (db *teamDB) UpdateBasicAuth(basicAuth *BasicAuth) (SavedTeam, error) {
 	query := `
 		UPDATE teams
 		SET basic_auth = $1
-		WHERE LOWER(name) = LOWER($2)
+		WHERE id = $2
 		RETURNING id, name, admin, basic_auth, github_auth, uaa_auth, genericoauth_auth
 	`
 
-	params := []interface{}{encryptedBasicAuth, db.teamName}
+	params := []interface{}{encryptedBasicAuth, db.teamId}
 
 	return db.queryTeam(query, params)
 }
@@ -642,10 +648,10 @@ func (db *teamDB) UpdateGitHubAuth(gitHubAuth *GitHubAuth) (SavedTeam, error) {
 	query := `
 		UPDATE teams
 		SET github_auth = $1
-		WHERE LOWER(name) = LOWER($2)
+		WHERE id = $2
 		RETURNING id, name, admin, basic_auth, github_auth, uaa_auth, genericoauth_auth
 	`
-	params := []interface{}{string(jsonEncodedGitHubAuth), db.teamName}
+	params := []interface{}{string(jsonEncodedGitHubAuth), db.teamId}
 	return db.queryTeam(query, params)
 }
 
@@ -658,10 +664,10 @@ func (db *teamDB) UpdateUAAAuth(uaaAuth *UAAAuth) (SavedTeam, error) {
 	query := `
 		UPDATE teams
 		SET uaa_auth = $1
-		WHERE LOWER(name) = LOWER($2)
+		WHERE id = $2
 		RETURNING id, name, admin, basic_auth, github_auth, uaa_auth, genericoauth_auth
 	`
-	params := []interface{}{string(jsonEncodedUAAAuth), db.teamName}
+	params := []interface{}{string(jsonEncodedUAAAuth), db.teamId}
 	return db.queryTeam(query, params)
 }
 
@@ -674,10 +680,10 @@ func (db *teamDB) UpdateGenericOAuth(genericOAuth *GenericOAuth) (SavedTeam, err
 	query := `
 		UPDATE teams
 		SET genericoauth_auth = $1
-		WHERE LOWER(name) = LOWER($2)
+		WHERE id = $2
 		RETURNING id, name, admin, basic_auth, github_auth, uaa_auth, genericoauth_auth
 	`
-	params := []interface{}{string(jsonEncodedGenericOAuth), db.teamName}
+	params := []interface{}{string(jsonEncodedGenericOAuth), db.teamId}
 	return db.queryTeam(query, params)
 }
 
@@ -692,12 +698,12 @@ func (db *teamDB) CreateOneOffBuild() (Build, error) {
 	build, _, err := db.buildFactory.ScanBuild(tx.QueryRow(`
 		INSERT INTO builds (name, team_id, status)
 		SELECT nextval('one_off_name'), t.id, 'pending'
-		FROM teams t WHERE LOWER(t.name) = LOWER($1)
+		FROM teams t WHERE t.id = $1
 		RETURNING `+buildColumns+`, null, null, null,
 		(
-			SELECT name FROM teams WHERE LOWER(name) = LOWER($1)
+			SELECT name FROM teams WHERE t.id = $1
 		)
-	`, string(db.teamName)))
+	`, string(db.teamId)))
 	if err != nil {
 		return nil, err
 	}
@@ -759,7 +765,7 @@ func (db *teamDB) GetPrivateAndPublicBuilds(page Page) ([]Build, Pagination, err
 		LeftJoin("jobs j ON b.job_id = j.id").
 		LeftJoin("pipelines p ON j.pipeline_id = p.id").
 		LeftJoin("teams t ON b.team_id = t.id").
-		Where(sq.Or{sq.Eq{"p.public": true}, sq.Eq{"LOWER(t.name)": strings.ToLower(db.teamName)}})
+		Where(sq.Or{sq.Eq{"p.public": true}, sq.Eq{"t.id": db.teamId}})
 
 	return getBuildsWithPagination(buildsQuery, page, db.conn, db.buildFactory)
 }

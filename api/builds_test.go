@@ -61,8 +61,8 @@ var _ = Describe("Builds API", func() {
 			Context("when creating a one-off build succeeds", func() {
 				BeforeEach(func() {
 					teamDB.CreateOneOffBuildStub = func() (db.Build, error) {
-						Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-						teamName := teamDBFactory.GetTeamDBArgsForCall(0)
+						Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+						teamName := teamDBFactory.GetTeamDBByNameArgsForCall(0)
 						build.IDReturns(42)
 						build.NameReturns("1")
 						build.TeamNameReturns(teamName)
@@ -819,8 +819,8 @@ var _ = Describe("Builds API", func() {
 
 				It("returns builds for team in the context", func() {
 					Expect(teamDB.GetPrivateAndPublicBuildsCallCount()).To(Equal(1))
-					Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-					teamName := teamDBFactory.GetTeamDBArgsForCall(0)
+					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+					teamName := teamDBFactory.GetTeamDBByNameArgsForCall(0)
 					Expect(teamName).To(Equal("some-team"))
 				})
 			})

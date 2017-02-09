@@ -123,7 +123,7 @@ var _ = Describe("Auth API", func() {
 
 			BeforeEach(func() {
 				savedTeam = db.SavedTeam{
-					ID: 0,
+					ID: 1,
 					Team: db.Team{
 						Name: "some-team",
 						BasicAuth: &db.BasicAuth{
@@ -160,8 +160,13 @@ var _ = Describe("Auth API", func() {
 			})
 
 			It("gets the teamDB for the right team name", func() {
-				Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-				Expect(teamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("some-team"))
+				Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+				Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-team"))
+			})
+
+			It("gets the teamDB for an existing team id", func() {
+				Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
+				Expect(teamDBFactory.GetTeamDBByIdArgsForCall(0)).To(Equal(1))
 			})
 
 			It("returns 200 OK", func() {

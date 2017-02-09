@@ -100,8 +100,13 @@ func (engine *execEngine) LookupBuild(logger lager.Logger, build db.Build) (Buil
 }
 
 func (engine *execEngine) convertPipelineNameToID(teamName string) func(plan *atc.Plan) error {
-	teamDB := engine.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := engine.teamDBFactory.GetTeamDBByName(teamName)
+
 	return func(plan *atc.Plan) error {
+		if err != nil {
+			return err
+		}
+
 		var pipelineName *string
 		var pipelineID *int
 

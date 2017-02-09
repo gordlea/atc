@@ -23,7 +23,10 @@ func NewTeamAuthValidator(
 
 func (v teamAuthValidator) IsAuthenticated(r *http.Request) bool {
 	teamName := r.FormValue(":team_name")
-	teamDB := v.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := v.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		return false
+	}
 	team, found, err := teamDB.GetTeam()
 	if err != nil || !found {
 		return false

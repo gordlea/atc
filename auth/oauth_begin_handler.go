@@ -49,7 +49,13 @@ func (handler *OAuthBeginHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	providerName := r.FormValue(":provider")
 	teamName := r.FormValue("team_name")
 
-	teamDB := handler.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := handler.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		hLog.Error("failed-to-get-team", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	team, found, err := teamDB.GetTeam()
 	if err != nil {
 		hLog.Error("failed-to-get-team", err, lager.Data{

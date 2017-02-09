@@ -54,11 +54,13 @@ var _ = Describe("Locks", func() {
 		pipelineDBFactory = db.NewPipelineDBFactory(dbConn, bus, lockFactory)
 
 		teamDBFactory = db.NewTeamDBFactory(dbConn, bus, lockFactory)
-		teamDB = teamDBFactory.GetTeamDB(atc.DefaultTeamName)
+		teamDB, err = teamDBFactory.GetTeamDBByName(atc.DefaultTeamName)
+		Expect(err).NotTo(HaveOccurred())
 
 		_, err := sqlDB.CreateTeam(db.Team{Name: "some-team"})
 		Expect(err).NotTo(HaveOccurred())
-		teamDB := teamDBFactory.GetTeamDB("some-team")
+		teamDB, err := teamDBFactory.GetTeamDBByName("some-team")
+		Expect(err).NotTo(HaveOccurred())
 
 		pipelineConfig := atc.Config{
 			Resources: atc.ResourceConfigs{

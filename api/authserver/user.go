@@ -25,7 +25,13 @@ func (s *Server) GetUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		savedTeam, found, err := s.teamDBFactory.GetTeamDB(authTeam.Name()).GetTeam()
+		teamDB, err := s.teamDBFactory.GetTeamDBByName(authTeam.Name())
+		if err != nil {
+			hLog.Error("failed-to-get-team-from-db", errors.New("failed-to-get-team-from-db"))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		savedTeam, found, err := teamDB.GetTeam()
 		if err != nil {
 			hLog.Error("failed-to-get-team-from-db", errors.New("failed-to-get-team-from-db"))
 			w.WriteHeader(http.StatusInternalServerError)

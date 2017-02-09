@@ -18,9 +18,14 @@ func (s *Server) OrderPipelines(w http.ResponseWriter, r *http.Request) {
 	}
 
 	teamName := r.FormValue(":team_name")
-	teamDB := s.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := s.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		s.logger.Error("failed-to-get-team", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-	err := teamDB.OrderPipelines(pipelineNames)
+	err = teamDB.OrderPipelines(pipelineNames)
 	if err != nil {
 		s.logger.Error("failed-to-order-pipelines", err, lager.Data{
 			"pipeline-names": pipelineNames,

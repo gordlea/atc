@@ -57,7 +57,7 @@ var _ = Describe("OAuthBeginHandler", func() {
 		expire = 24 * time.Hour
 
 		fakeTeamDBFactory = new(dbfakes.FakeTeamDBFactory)
-		fakeTeamDBFactory.GetTeamDBReturns(fakeTeamDB)
+		fakeTeamDBFactory.GetTeamDBByIdReturns(fakeTeamDB)
 		handler, err := auth.NewOAuthHandler(
 			lagertest.NewTestLogger("test"),
 			fakeProviderFactory,
@@ -126,8 +126,8 @@ var _ = Describe("OAuthBeginHandler", func() {
 				})
 
 				It("gets the teamDB with correct teamName", func() {
-					Expect(fakeTeamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-					Expect(fakeTeamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("some-team"))
+					Expect(fakeTeamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+					Expect(fakeTeamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-team"))
 				})
 
 				It("redirects to the auth code URL", func() {

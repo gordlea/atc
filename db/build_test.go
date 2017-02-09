@@ -27,6 +27,7 @@ var _ = Describe("Build", func() {
 	var pipelineConfig atc.Config
 
 	BeforeEach(func() {
+		var err error
 		postgresRunner.Truncate()
 
 		dbConn = db.Wrap(postgresRunner.Open())
@@ -42,7 +43,8 @@ var _ = Describe("Build", func() {
 
 		lockFactory := db.NewLockFactory(retryableConn)
 		teamDBFactory := db.NewTeamDBFactory(dbConn, bus, lockFactory)
-		teamDB = teamDBFactory.GetTeamDB(atc.DefaultTeamName)
+		teamDB, err = teamDBFactory.GetTeamDBByName(atc.DefaultTeamName)
+		Expect(err).NotTo(HaveOccurred())
 
 		pipelineConfig = atc.Config{
 			Jobs: atc.JobConfigs{
@@ -69,7 +71,6 @@ var _ = Describe("Build", func() {
 			},
 		}
 
-		var err error
 		pipeline, _, err = teamDB.SaveConfigToBeDeprecated("some-pipeline", pipelineConfig, db.ConfigVersion(1), db.PipelineUnpaused)
 		Expect(err).NotTo(HaveOccurred())
 

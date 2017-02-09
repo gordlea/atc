@@ -8,56 +8,101 @@ import (
 )
 
 type FakeTeamDBFactory struct {
-	GetTeamDBStub        func(string) db.TeamDB
-	getTeamDBMutex       sync.RWMutex
-	getTeamDBArgsForCall []struct {
+	GetTeamDBByIdStub        func(int) db.TeamDB
+	getTeamDBByIdMutex       sync.RWMutex
+	getTeamDBByIdArgsForCall []struct {
+		arg1 int
+	}
+	getTeamDBByIdReturns struct {
+		result1 db.TeamDB
+	}
+	GetTeamDBByNameStub        func(string) (db.TeamDB, error)
+	getTeamDBByNameMutex       sync.RWMutex
+	getTeamDBByNameArgsForCall []struct {
 		arg1 string
 	}
-	getTeamDBReturns struct {
+	getTeamDBByNameReturns struct {
 		result1 db.TeamDB
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeTeamDBFactory) GetTeamDB(arg1 string) db.TeamDB {
-	fake.getTeamDBMutex.Lock()
-	fake.getTeamDBArgsForCall = append(fake.getTeamDBArgsForCall, struct {
-		arg1 string
+func (fake *FakeTeamDBFactory) GetTeamDBById(arg1 int) db.TeamDB {
+	fake.getTeamDBByIdMutex.Lock()
+	fake.getTeamDBByIdArgsForCall = append(fake.getTeamDBByIdArgsForCall, struct {
+		arg1 int
 	}{arg1})
-	fake.recordInvocation("GetTeamDB", []interface{}{arg1})
-	fake.getTeamDBMutex.Unlock()
-	if fake.GetTeamDBStub != nil {
-		return fake.GetTeamDBStub(arg1)
+	fake.recordInvocation("GetTeamDBById", []interface{}{arg1})
+	fake.getTeamDBByIdMutex.Unlock()
+	if fake.GetTeamDBByIdStub != nil {
+		return fake.GetTeamDBByIdStub(arg1)
 	} else {
-		return fake.getTeamDBReturns.result1
+		return fake.getTeamDBByIdReturns.result1
 	}
 }
 
-func (fake *FakeTeamDBFactory) GetTeamDBCallCount() int {
-	fake.getTeamDBMutex.RLock()
-	defer fake.getTeamDBMutex.RUnlock()
-	return len(fake.getTeamDBArgsForCall)
+func (fake *FakeTeamDBFactory) GetTeamDBByIdCallCount() int {
+	fake.getTeamDBByIdMutex.RLock()
+	defer fake.getTeamDBByIdMutex.RUnlock()
+	return len(fake.getTeamDBByIdArgsForCall)
 }
 
-func (fake *FakeTeamDBFactory) GetTeamDBArgsForCall(i int) string {
-	fake.getTeamDBMutex.RLock()
-	defer fake.getTeamDBMutex.RUnlock()
-	return fake.getTeamDBArgsForCall[i].arg1
+func (fake *FakeTeamDBFactory) GetTeamDBByIdArgsForCall(i int) int {
+	fake.getTeamDBByIdMutex.RLock()
+	defer fake.getTeamDBByIdMutex.RUnlock()
+	return fake.getTeamDBByIdArgsForCall[i].arg1
 }
 
-func (fake *FakeTeamDBFactory) GetTeamDBReturns(result1 db.TeamDB) {
-	fake.GetTeamDBStub = nil
-	fake.getTeamDBReturns = struct {
+func (fake *FakeTeamDBFactory) GetTeamDBByIdReturns(result1 db.TeamDB) {
+	fake.GetTeamDBByIdStub = nil
+	fake.getTeamDBByIdReturns = struct {
 		result1 db.TeamDB
 	}{result1}
+}
+
+func (fake *FakeTeamDBFactory) GetTeamDBByName(arg1 string) (db.TeamDB, error) {
+	fake.getTeamDBByNameMutex.Lock()
+	fake.getTeamDBByNameArgsForCall = append(fake.getTeamDBByNameArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	fake.recordInvocation("GetTeamDBByName", []interface{}{arg1})
+	fake.getTeamDBByNameMutex.Unlock()
+	if fake.GetTeamDBByNameStub != nil {
+		return fake.GetTeamDBByNameStub(arg1)
+	} else {
+		return fake.getTeamDBByNameReturns.result1, fake.getTeamDBByNameReturns.result2
+	}
+}
+
+func (fake *FakeTeamDBFactory) GetTeamDBByNameCallCount() int {
+	fake.getTeamDBByNameMutex.RLock()
+	defer fake.getTeamDBByNameMutex.RUnlock()
+	return len(fake.getTeamDBByNameArgsForCall)
+}
+
+func (fake *FakeTeamDBFactory) GetTeamDBByNameArgsForCall(i int) string {
+	fake.getTeamDBByNameMutex.RLock()
+	defer fake.getTeamDBByNameMutex.RUnlock()
+	return fake.getTeamDBByNameArgsForCall[i].arg1
+}
+
+func (fake *FakeTeamDBFactory) GetTeamDBByNameReturns(result1 db.TeamDB, result2 error) {
+	fake.GetTeamDBByNameStub = nil
+	fake.getTeamDBByNameReturns = struct {
+		result1 db.TeamDB
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeTeamDBFactory) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getTeamDBMutex.RLock()
-	defer fake.getTeamDBMutex.RUnlock()
+	fake.getTeamDBByIdMutex.RLock()
+	defer fake.getTeamDBByIdMutex.RUnlock()
+	fake.getTeamDBByNameMutex.RLock()
+	defer fake.getTeamDBByNameMutex.RUnlock()
 	return fake.invocations
 }
 

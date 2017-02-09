@@ -24,10 +24,15 @@ func (s *Server) SetTeam(w http.ResponseWriter, r *http.Request) {
 	}
 
 	teamName := r.FormValue(":team_name")
-	teamDB := s.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := s.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		hLog.Error("failed-to-get-team", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	var team db.Team
-	err := json.NewDecoder(r.Body).Decode(&team)
+	err = json.NewDecoder(r.Body).Decode(&team)
 	if err != nil {
 		hLog.Error("malformed-request", err)
 		w.WriteHeader(http.StatusBadRequest)

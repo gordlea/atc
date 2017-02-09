@@ -41,7 +41,7 @@ var _ = Describe("ExecEngine", func() {
 
 		fakeTeamDBFactory := new(dbfakes.FakeTeamDBFactory)
 		fakeTeamDB = new(dbfakes.FakeTeamDB)
-		fakeTeamDBFactory.GetTeamDBReturns(fakeTeamDB)
+		fakeTeamDBFactory.GetTeamDBByIdReturns(fakeTeamDB)
 		execEngine = engine.NewExecEngine(
 			fakeFactory,
 			fakeDelegateFactory,

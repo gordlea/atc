@@ -10,12 +10,17 @@ import (
 )
 
 func (s *Server) ListPipelines(w http.ResponseWriter, r *http.Request) {
-	logger := s.logger.Session("list-pipelines")
-	requestTeamName := r.FormValue(":team_name")
-	teamDB := s.teamDBFactory.GetTeamDB(requestTeamName)
-
 	var pipelines []db.SavedPipeline
 	var err error
+
+	logger := s.logger.Session("list-pipelines")
+	requestTeamName := r.FormValue(":team_name")
+	teamDB, err := s.teamDBFactory.GetTeamDBByName(requestTeamName)
+	if err != nil {
+		logger.Error("failed-to-get-team", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	authTeam, authTeamFound := auth.GetTeam(r)
 	if authTeamFound && authTeam.IsAuthorized(requestTeamName) {

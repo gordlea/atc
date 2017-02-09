@@ -54,7 +54,8 @@ var _ = Describe("Updating pipeline config for specific team", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		teamDBFactory = db.NewTeamDBFactory(dbConn, bus, lockFactory)
-		teamDB = teamDBFactory.GetTeamDB("some-team")
+		teamDB, err = teamDBFactory.GetTeamDBByName("some-team")
+		Expect(err).NotTo(HaveOccurred())
 
 		config = atc.Config{
 			Groups: atc.GroupConfigs{
@@ -844,7 +845,8 @@ var _ = Describe("Updating pipeline config for specific team", func() {
 			_, err := database.CreateTeam(db.Team{Name: "some-other-team"})
 			Expect(err).NotTo(HaveOccurred())
 
-			otherTeamDB = teamDBFactory.GetTeamDB("some-other-team")
+			otherTeamDB, err = teamDBFactory.GetTeamDBByName("some-other-team")
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("can allow pipelines with the same name across teams", func() {

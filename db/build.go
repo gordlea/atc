@@ -614,7 +614,7 @@ func (b *build) GetPreparation() (BuildPreparation, bool, error) {
 	}
 
 	tdbf := NewTeamDBFactory(b.conn, b.bus, b.lockFactory)
-	tdb := tdbf.GetTeamDB(b.teamName)
+	tdb := tdbf.GetTeamDBById(b.teamID)
 	savedPipeline, found, err := tdb.GetPipelineByName(b.pipelineName)
 	if err != nil {
 		return BuildPreparation{}, false, err

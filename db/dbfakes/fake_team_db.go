@@ -48,6 +48,16 @@ type FakeTeamDB struct {
 	orderPipelinesReturns struct {
 		result1 error
 	}
+	GetTeamIdByNameStub        func(teamName string) (int, bool, error)
+	getTeamIdByNameMutex       sync.RWMutex
+	getTeamIdByNameArgsForCall []struct {
+		teamName string
+	}
+	getTeamIdByNameReturns struct {
+		result1 int
+		result2 bool
+		result3 error
+	}
 	GetTeamStub        func() (db.SavedTeam, bool, error)
 	getTeamMutex       sync.RWMutex
 	getTeamArgsForCall []struct{}
@@ -328,6 +338,41 @@ func (fake *FakeTeamDB) OrderPipelinesReturns(result1 error) {
 	fake.orderPipelinesReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeTeamDB) GetTeamIdByName(teamName string) (int, bool, error) {
+	fake.getTeamIdByNameMutex.Lock()
+	fake.getTeamIdByNameArgsForCall = append(fake.getTeamIdByNameArgsForCall, struct {
+		teamName string
+	}{teamName})
+	fake.recordInvocation("GetTeamIdByName", []interface{}{teamName})
+	fake.getTeamIdByNameMutex.Unlock()
+	if fake.GetTeamIdByNameStub != nil {
+		return fake.GetTeamIdByNameStub(teamName)
+	} else {
+		return fake.getTeamIdByNameReturns.result1, fake.getTeamIdByNameReturns.result2, fake.getTeamIdByNameReturns.result3
+	}
+}
+
+func (fake *FakeTeamDB) GetTeamIdByNameCallCount() int {
+	fake.getTeamIdByNameMutex.RLock()
+	defer fake.getTeamIdByNameMutex.RUnlock()
+	return len(fake.getTeamIdByNameArgsForCall)
+}
+
+func (fake *FakeTeamDB) GetTeamIdByNameArgsForCall(i int) string {
+	fake.getTeamIdByNameMutex.RLock()
+	defer fake.getTeamIdByNameMutex.RUnlock()
+	return fake.getTeamIdByNameArgsForCall[i].teamName
+}
+
+func (fake *FakeTeamDB) GetTeamIdByNameReturns(result1 int, result2 bool, result3 error) {
+	fake.GetTeamIdByNameStub = nil
+	fake.getTeamIdByNameReturns = struct {
+		result1 int
+		result2 bool
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeTeamDB) GetTeam() (db.SavedTeam, bool, error) {
@@ -796,6 +841,8 @@ func (fake *FakeTeamDB) Invocations() map[string][][]interface{} {
 	defer fake.getPipelineByNameMutex.RUnlock()
 	fake.orderPipelinesMutex.RLock()
 	defer fake.orderPipelinesMutex.RUnlock()
+	fake.getTeamIdByNameMutex.RLock()
+	defer fake.getTeamIdByNameMutex.RUnlock()
 	fake.getTeamMutex.RLock()
 	defer fake.getTeamMutex.RUnlock()
 	fake.updateNameMutex.RLock()

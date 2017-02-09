@@ -133,7 +133,7 @@ var _ = Describe("SQL DB Teams", func() {
 			Expect(count.Valid).To(BeTrue())
 			Expect(count.Int64).To(Equal(int64(1)))
 
-			team, _, err := teamDBFactory.GetTeamDB(atc.DefaultTeamName).GetTeam()
+			team, _, err := teamDBFactory.GetTeamDBByName(atc.DefaultTeamName).GetTeam()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(team.Admin).To(BeTrue())
 			Expect(team.Name).To(Equal(atc.DefaultTeamName))
@@ -175,7 +175,7 @@ var _ = Describe("SQL DB Teams", func() {
 			Expect(expectedSavedTeam.Team.GenericOAuth).To(Equal(expectedTeam.GenericOAuth))
 			Expect(expectedSavedTeam.Team.Name).To(Equal("AvengerS"))
 
-			savedTeam, found, err := teamDBFactory.GetTeamDB("aVengers").GetTeam()
+			savedTeam, found, err := teamDBFactory.GetTeamDBByName("aVengers").GetTeam()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 			Expect(savedTeam).To(Equal(expectedSavedTeam))
@@ -193,7 +193,7 @@ var _ = Describe("SQL DB Teams", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expectedSavedTeam.Team.Name).To(Equal(expectedTeam.Name))
 
-			savedTeam, found, err := teamDBFactory.GetTeamDB("avengers").GetTeam()
+			savedTeam, found, err := teamDBFactory.GetTeamDBByName("avengers").GetTeam()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 			Expect(savedTeam).To(Equal(expectedSavedTeam))
@@ -227,7 +227,7 @@ var _ = Describe("SQL DB Teams", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expectedSavedTeam.Team).To(Equal(expectedTeam))
 
-			savedTeam, found, err := teamDBFactory.GetTeamDB("avengers").GetTeam()
+			savedTeam, found, err := teamDBFactory.GetTeamDBByName("avengers").GetTeam()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 			Expect(savedTeam).To(Equal(expectedSavedTeam))
@@ -251,7 +251,7 @@ var _ = Describe("SQL DB Teams", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expectedSavedTeam.Team).To(Equal(expectedTeam))
 
-			savedTeam, found, err := teamDBFactory.GetTeamDB("avengers").GetTeam()
+			savedTeam, found, err := teamDBFactory.GetTeamDBByName("avengers").GetTeam()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 			Expect(savedTeam).To(Equal(expectedSavedTeam))
@@ -275,7 +275,7 @@ var _ = Describe("SQL DB Teams", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(expectedSavedTeam.Team).To(Equal(expectedTeam))
 
-			savedTeam, found, err := teamDBFactory.GetTeamDB("cyborgs").GetTeam()
+			savedTeam, found, err := teamDBFactory.GetTeamDBByName("cyborgs").GetTeam()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(found).To(BeTrue())
 			Expect(savedTeam).To(Equal(expectedSavedTeam))
@@ -333,7 +333,8 @@ var _ = Describe("SQL DB Teams", func() {
 						},
 					}
 
-					teamDB := teamDBFactory.GetTeamDB("team-name")
+					teamDB, err := teamDBFactory.GetTeamDBByName("team-name")
+					Expect(err).NotTo(HaveOccurred())
 					savedPipeline, _, err := teamDB.SaveConfigToBeDeprecated("string", config, db.ConfigVersion(1), db.PipelineUnpaused)
 					Expect(err).NotTo(HaveOccurred())
 

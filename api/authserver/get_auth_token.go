@@ -18,7 +18,12 @@ func (s *Server) GetAuthToken(w http.ResponseWriter, r *http.Request) {
 
 	var token atc.AuthToken
 	teamName := r.FormValue(":team_name")
-	teamDB := s.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := s.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		logger.Error("get-team-by-name", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	team, found, err := teamDB.GetTeam()
 	if err != nil {
 		logger.Error("get-team-by-name", err)

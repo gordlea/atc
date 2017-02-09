@@ -856,9 +856,9 @@ var _ = Describe("Teams API", func() {
 					userContextReader.GetTeamReturns("non-admin-team", false, true)
 				})
 
-				It("updates requested team", func() {
-					Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-					Expect(teamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("non-admin-team"))
+				It("updates requested team by name", func() {
+					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("non-admin-team"))
 				})
 
 				It("returns 200 OK", func() {
@@ -896,8 +896,8 @@ var _ = Describe("Teams API", func() {
 				})
 
 				It("updates requested team", func() {
-					Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-					Expect(teamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("non-admin-team"))
+					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("non-admin-team"))
 				})
 
 				It("returns 403 forbidden", func() {
@@ -1010,10 +1010,10 @@ var _ = Describe("Teams API", func() {
 				})
 
 				It("constructs teamDB with provided team name", func() {
-					Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(3))
-					Expect(teamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("some-new-name"))
-					Expect(teamDBFactory.GetTeamDBArgsForCall(1)).To(Equal(teamName))
-					Expect(teamDBFactory.GetTeamDBArgsForCall(1)).To(Equal(teamName))
+					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(3))
+					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-new-name"))
+					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(1)).To(Equal(teamName))
+					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(1)).To(Equal(teamName))
 				})
 
 				It("renames the team to the name provided", func() {

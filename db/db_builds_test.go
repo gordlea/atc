@@ -54,7 +54,8 @@ var _ = Describe("Builds", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		teamDBFactory := db.NewTeamDBFactory(dbConn, bus, lockFactory)
-		teamDB = teamDBFactory.GetTeamDB("some-team")
+		teamDB, err = teamDBFactory.GetTeamDBByName("some-team")
+		Expect(err).NotTo(HaveOccurred())
 
 		config = atc.Config{
 			Jobs: atc.JobConfigs{

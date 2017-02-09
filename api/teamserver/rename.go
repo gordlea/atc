@@ -64,7 +64,12 @@ func (s *Server) RenameTeam(w http.ResponseWriter, r *http.Request) {
 
 	if found {
 		hLog.Debug("updating team name")
-		teamDb := s.teamDBFactory.GetTeamDB(teamName)
+		teamDb, err := s.teamDBFactory.GetTeamDBByName(teamName)
+		if err != nil {
+			s.logger.Error("failed-to-get-team", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		savedTeam, err = teamDb.UpdateName(value.Name)
 
 		if err != nil {
@@ -84,6 +89,9 @@ func (s *Server) RenameTeam(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getTeamByName(teamName string) (db.SavedTeam, bool, error) {
-	teamDB := s.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := s.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		return db.SavedTeam{}, false, err
+	}
 	return teamDB.GetTeam()
 }

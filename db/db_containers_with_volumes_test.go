@@ -44,7 +44,8 @@ var _ = Describe("Keeping track of containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		teamID = savedTeam.ID
 
-		teamDB = teamDBFactory.GetTeamDB("some-team")
+		teamDB, err = teamDBFactory.GetTeamDBByName("some-team")
+		Expect(err).NotTo(HaveOccurred())
 
 		_, err = database.SaveWorker(db.WorkerInfo{
 			Name:       "some-worker",

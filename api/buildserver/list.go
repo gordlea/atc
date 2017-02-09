@@ -41,7 +41,12 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request) {
 
 	authTeam, authTeamFound := auth.GetTeam(r)
 	if authTeamFound {
-		teamDB := s.teamDBFactory.GetTeamDB(authTeam.Name())
+		teamDB, err := s.teamDBFactory.GetTeamDBByName(authTeam.Name())
+		if err != nil {
+			logger.Error("failed-to-get-team", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 		builds, pagination, err = teamDB.GetPrivateAndPublicBuilds(page)
 	} else {
 		builds, pagination, err = s.buildsDB.GetPublicBuilds(page)

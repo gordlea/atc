@@ -89,8 +89,8 @@ var _ = Describe("Handler", func() {
 			})
 
 			It("looks up the team by the right name", func() {
-				Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-				Expect(teamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("some-team"))
+				Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+				Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-team"))
 			})
 
 			It("looks up the pipeline by the right name", func() {

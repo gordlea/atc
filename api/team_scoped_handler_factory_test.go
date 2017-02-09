@@ -30,7 +30,7 @@ var _ = Describe("TeamScopedHandlerFactory", func() {
 	BeforeEach(func() {
 		teamDBFactory = new(dbfakes.FakeTeamDBFactory)
 		teamDB = new(dbfakes.FakeTeamDB)
-		teamDBFactory.GetTeamDBReturns(teamDB)
+		teamDBFactory.GetTeamDBByIdReturns(teamDB)
 
 		delegate = &delegateHandler{}
 
@@ -66,8 +66,8 @@ var _ = Describe("TeamScopedHandlerFactory", func() {
 		})
 
 		It("creates teamDB with team name from context", func() {
-			Expect(teamDBFactory.GetTeamDBCallCount()).To(Equal(1))
-			Expect(teamDBFactory.GetTeamDBArgsForCall(0)).To(Equal("some-team"))
+			Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
+			Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-team"))
 		})
 
 		It("calls scoped handler with teamDB from context", func() {

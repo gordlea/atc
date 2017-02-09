@@ -20,7 +20,13 @@ const BasicAuthDisplayName = "Basic Auth"
 
 func (s *Server) ListAuthMethods(w http.ResponseWriter, r *http.Request) {
 	teamName := r.FormValue(":team_name")
-	teamDB := s.teamDBFactory.GetTeamDB(teamName)
+	teamDB, err := s.teamDBFactory.GetTeamDBByName(teamName)
+	if err != nil {
+		s.logger.Error("failed-to-get-team", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	team, found, err := teamDB.GetTeam()
 	if err != nil {
 		s.logger.Error("failed-to-get-team", err)
