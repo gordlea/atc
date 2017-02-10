@@ -30,7 +30,7 @@ var _ = Describe("TeamScopedHandlerFactory", func() {
 	BeforeEach(func() {
 		teamDBFactory = new(dbfakes.FakeTeamDBFactory)
 		teamDB = new(dbfakes.FakeTeamDB)
-		teamDBFactory.GetTeamDBByIdReturns(teamDB)
+		teamDBFactory.GetTeamDBByNameReturns(teamDB, nil)
 
 		delegate = &delegateHandler{}
 

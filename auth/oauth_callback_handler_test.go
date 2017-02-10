@@ -101,7 +101,7 @@ var _ = Describe("OAuthCallbackHandler", func() {
 		fakeTeamDBFactory := new(dbfakes.FakeTeamDBFactory)
 		fakeTeamDB = new(dbfakes.FakeTeamDB)
 		fakeTeamDB.GetTeamReturns(team, true, nil)
-		fakeTeamDBFactory.GetTeamDBReturns(fakeTeamDB)
+		fakeTeamDBFactory.GetTeamDBByNameReturns(fakeTeamDB, nil)
 
 		handler, err := auth.NewOAuthHandler(
 			lagertest.NewTestLogger("test"),

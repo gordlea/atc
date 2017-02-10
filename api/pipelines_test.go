@@ -118,7 +118,6 @@ var _ = Describe("Pipelines API", func() {
 			It("constructs teamDB with provided team name", func() {
 				Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 				Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-team"))
-				Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 			})
 		})
 
@@ -247,7 +246,6 @@ var _ = Describe("Pipelines API", func() {
 			It("constructs teamDB with provided team name", func() {
 				Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 				Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("main"))
-				Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 			})
 
 			It("returns all team's pipelines", func() {
@@ -529,7 +527,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				It("injects the proper pipelineDB", func() {
@@ -602,7 +599,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				It("injects the proper pipelineDB", func() {
@@ -680,7 +676,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				It("injects the proper pipelineDB", func() {
@@ -758,7 +753,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				It("injects the proper pipelineDB", func() {
@@ -836,7 +830,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				It("injects the proper pipelineDB", func() {
@@ -937,7 +930,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				Context("when ordering the pipelines succeeds", func() {
@@ -1066,7 +1058,6 @@ var _ = Describe("Pipelines API", func() {
 			It("constructs teamDB with provided team name", func() {
 				Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 				Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-				Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 			})
 
 			It("returns 200", func() {
@@ -1153,7 +1144,6 @@ var _ = Describe("Pipelines API", func() {
 				It("constructs teamDB with provided team name", func() {
 					Expect(teamDBFactory.GetTeamDBByNameCallCount()).To(Equal(1))
 					Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("a-team"))
-					Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
 				})
 
 				It("injects the proper pipelineDB", func() {

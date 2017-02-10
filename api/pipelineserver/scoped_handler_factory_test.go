@@ -28,7 +28,7 @@ var _ = Describe("Handler", func() {
 	BeforeEach(func() {
 		teamDBFactory = new(dbfakes.FakeTeamDBFactory)
 		teamDB = new(dbfakes.FakeTeamDB)
-		teamDBFactory.GetTeamDBReturns(teamDB)
+		teamDBFactory.GetTeamDBByNameReturns(teamDB, nil)
 
 		pipelineDB = new(dbfakes.FakePipelineDB)
 		delegate = &delegateHandler{}

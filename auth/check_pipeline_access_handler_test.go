@@ -31,7 +31,7 @@ var _ = Describe("CheckPipelineAccessHandler", func() {
 	BeforeEach(func() {
 		teamDBFactory = new(dbfakes.FakeTeamDBFactory)
 		teamDB = new(dbfakes.FakeTeamDB)
-		teamDBFactory.GetTeamDBByIdReturns(teamDB)
+		teamDBFactory.GetTeamDBByNameReturns(teamDB, nil)
 
 		pipelineDB = new(dbfakes.FakePipelineDB)
 

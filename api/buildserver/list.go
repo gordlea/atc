@@ -16,10 +16,11 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request) {
 	logger := s.logger.Session("list-builds")
 
 	var (
-		err   error
-		until int
-		since int
-		limit int
+		err    error
+		until  int
+		since  int
+		limit  int
+		teamDB db.TeamDB
 	)
 
 	urlUntil := r.FormValue(atc.PaginationQueryUntil)
@@ -41,7 +42,7 @@ func (s *Server) ListBuilds(w http.ResponseWriter, r *http.Request) {
 
 	authTeam, authTeamFound := auth.GetTeam(r)
 	if authTeamFound {
-		teamDB, err := s.teamDBFactory.GetTeamDBByName(authTeam.Name())
+		teamDB, err = s.teamDBFactory.GetTeamDBByName(authTeam.Name())
 		if err != nil {
 			logger.Error("failed-to-get-team", err)
 			w.WriteHeader(http.StatusInternalServerError)

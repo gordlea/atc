@@ -57,7 +57,7 @@ var _ = Describe("OAuthBeginHandler", func() {
 		expire = 24 * time.Hour
 
 		fakeTeamDBFactory = new(dbfakes.FakeTeamDBFactory)
-		fakeTeamDBFactory.GetTeamDBByIdReturns(fakeTeamDB)
+		fakeTeamDBFactory.GetTeamDBByNameReturns(fakeTeamDB, nil)
 		handler, err := auth.NewOAuthHandler(
 			lagertest.NewTestLogger("test"),
 			fakeProviderFactory,

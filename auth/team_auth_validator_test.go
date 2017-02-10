@@ -46,7 +46,7 @@ var _ = Describe("TeamAuthValidator", func() {
 		jwtValidator = new(authfakes.FakeValidator)
 		teamDBFactory := new(dbfakes.FakeTeamDBFactory)
 		teamDB = new(dbfakes.FakeTeamDB)
-		teamDBFactory.GetTeamDBByIdReturns(teamDB)
+		teamDBFactory.GetTeamDBByNameReturns(teamDB, nil)
 
 		validator = auth.NewTeamAuthValidator(teamDBFactory, jwtValidator)
 

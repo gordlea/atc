@@ -164,11 +164,6 @@ var _ = Describe("Auth API", func() {
 				Expect(teamDBFactory.GetTeamDBByNameArgsForCall(0)).To(Equal("some-team"))
 			})
 
-			It("gets the teamDB for an existing team id", func() {
-				Expect(teamDBFactory.GetTeamDBByIdCallCount()).To(Equal(1))
-				Expect(teamDBFactory.GetTeamDBByIdArgsForCall(0)).To(Equal(1))
-			})
-
 			It("returns 200 OK", func() {
 				Expect(response.StatusCode).To(Equal(http.StatusOK))
 			})
